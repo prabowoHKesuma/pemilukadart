@@ -62,7 +62,7 @@ $success = Session::flash('success');
                     Pemilihan
                 </a>
 
-                <a href="#" class="list-group-item list-group-item-action disabled">
+                <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/voters" class="list-group-item list-group-item-action">
                     Pemilih
                 </a>
 
