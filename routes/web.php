@@ -7,6 +7,7 @@ use App\Controllers\CandidateController;
 use App\Controllers\VoterController;
 use App\Controllers\ElectionVoterController;
 use App\Controllers\VotingController;
+use App\Controllers\ResultController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -47,3 +48,6 @@ $router->get('/elections/{electionId}/tps-voting', [VotingController::class, 'se
 $router->get('/elections/{electionId}/tps-voting/success', [VotingController::class, 'success']);
 $router->get('/elections/{electionId}/tps-voting/{electionVoterId}/ballot', [VotingController::class, 'ballot']);
 $router->post('/elections/{electionId}/tps-voting/{electionVoterId}/submit', [VotingController::class, 'submit']);
+
+$router->get('/results', [ResultController::class, 'index']);
+$router->get('/elections/{electionId}/results', [ResultController::class, 'show']);

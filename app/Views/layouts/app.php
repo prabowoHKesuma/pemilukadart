@@ -78,7 +78,7 @@ $success = Session::flash('success');
                     Verifikasi Remote
                 </a>
 
-                <a href="#" class="list-group-item list-group-item-action disabled">
+                <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/results" class="list-group-item list-group-item-action">
                     Hasil
                 </a>
             </div>

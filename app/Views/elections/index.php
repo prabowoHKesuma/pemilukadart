@@ -102,6 +102,12 @@ use App\Core\Env;
                                             </a>
                                         <?php endif; ?>
                                         <a 
+                                            href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/results" 
+                                            class="btn btn-sm btn-dark"
+                                        >
+                                            Hasil
+                                        </a>
+                                        <a 
                                             href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/edit" 
                                             class="btn btn-sm btn-warning"
                                         >
