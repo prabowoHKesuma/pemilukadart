@@ -82,6 +82,12 @@ use App\Core\Env;
                                 <div class="d-flex flex-wrap gap-1">
                                     <?php if (in_array(Auth::role(), ['superadmin', 'panitia'], true)): ?>
                                         <a 
+                                            href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/candidates" 
+                                            class="btn btn-sm btn-info text-white"
+                                        >
+                                            Kandidat
+                                        </a>
+                                        <a 
                                             href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/edit" 
                                             class="btn btn-sm btn-warning"
                                         >
