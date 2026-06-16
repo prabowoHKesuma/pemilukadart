@@ -170,4 +170,105 @@ class ElectionVoter
 
         return (int) $stmt->fetchColumn();
     }
+
+    public static function searchForVoting(int $electionId, string $keyword): array
+    {
+        $pdo = Database::connection();
+
+        $like = '%' . $keyword . '%';
+
+        $stmt = $pdo->prepare("
+            SELECT 
+                ev.*,
+                v.voter_code,
+                v.name,
+                v.address,
+                v.phone,
+                v.rt,
+                v.rw,
+                v.is_active
+            FROM election_voters ev
+            JOIN voters v ON v.id = ev.voter_id
+            WHERE ev.election_id = ?
+            AND (
+                    v.voter_code LIKE ?
+                OR v.name LIKE ?
+                OR v.phone LIKE ?
+            )
+            ORDER BY v.name ASC
+            LIMIT 30
+        ");
+
+        $stmt->execute([
+            $electionId,
+            $like,
+            $like,
+            $like,
+        ]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function findDetailForVoting(int $electionId, int $electionVoterId): ?array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare("
+            SELECT 
+                ev.*,
+                v.voter_code,
+                v.name,
+                v.address,
+                v.phone,
+                v.rt,
+                v.rw,
+                v.is_active
+            FROM election_voters ev
+            JOIN voters v ON v.id = ev.voter_id
+            WHERE ev.election_id = ?
+            AND ev.id = ?
+            LIMIT 1
+        ");
+
+        $stmt->execute([$electionId, $electionVoterId]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    public static function lockForVoting(\PDO $pdo, int $electionId, int $electionVoterId): ?array
+    {
+        $stmt = $pdo->prepare("
+            SELECT 
+                ev.*,
+                v.is_active,
+                v.name,
+                v.voter_code
+            FROM election_voters ev
+            JOIN voters v ON v.id = ev.voter_id
+            WHERE ev.election_id = ?
+            AND ev.id = ?
+            LIMIT 1
+            FOR UPDATE
+        ");
+
+        $stmt->execute([$electionId, $electionVoterId]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    public static function markVoted(\PDO $pdo, int $electionVoterId): bool
+    {
+        $stmt = $pdo->prepare("
+            UPDATE election_voters
+            SET has_voted = 1,
+                voted_at = NOW()
+            WHERE id = ?
+        ");
+
+        return $stmt->execute([$electionVoterId]);
+    }
 }

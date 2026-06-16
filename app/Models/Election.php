@@ -125,4 +125,46 @@ class Election
 
         return $stmt->execute([$status, $id]);
     }
+
+
+    public static function openElections(): array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->query("
+            SELECT 
+                e.*,
+                COUNT(DISTINCT c.id) AS total_candidates,
+                COUNT(DISTINCT ev.id) AS total_voters,
+                SUM(CASE WHEN ev.has_voted = 1 THEN 1 ELSE 0 END) AS total_voted
+            FROM elections e
+            LEFT JOIN candidates c 
+                ON c.election_id = e.id 
+            AND c.is_active = 1
+            LEFT JOIN election_voters ev 
+                ON ev.election_id = e.id
+            WHERE e.status = 'open'
+            GROUP BY e.id
+            ORDER BY e.start_at ASC, e.created_at DESC
+        ");
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function lockById(\PDO $pdo, int $id): ?array
+    {
+        $stmt = $pdo->prepare("
+            SELECT *
+            FROM elections
+            WHERE id = ?
+            LIMIT 1
+            FOR UPDATE
+        ");
+
+        $stmt->execute([$id]);
+
+        $election = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $election ?: null;
+    }
 }

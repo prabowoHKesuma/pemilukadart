@@ -70,7 +70,7 @@ $success = Session::flash('success');
                     Kandidat
                 </a>
 
-                <a href="#" class="list-group-item list-group-item-action disabled">
+                <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/tps-voting" class="list-group-item list-group-item-action">
                     Voting TPS
                 </a>
 

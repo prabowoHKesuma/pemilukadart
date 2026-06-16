@@ -93,6 +93,14 @@ use App\Core\Env;
                                         >
                                             Pemilih
                                         </a>
+                                        <?php if ($election['status'] === 'open'): ?>
+                                            <a 
+                                                href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/tps-voting" 
+                                                class="btn btn-sm btn-success"
+                                            >
+                                                Voting TPS
+                                            </a>
+                                        <?php endif; ?>
                                         <a 
                                             href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/edit" 
                                             class="btn btn-sm btn-warning"

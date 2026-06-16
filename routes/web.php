@@ -6,6 +6,7 @@ use App\Controllers\ElectionController;
 use App\Controllers\CandidateController;
 use App\Controllers\VoterController;
 use App\Controllers\ElectionVoterController;
+use App\Controllers\VotingController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -40,3 +41,9 @@ $router->get('/elections/{electionId}/voters/create', [ElectionVoterController::
 $router->post('/elections/{electionId}/voters/store', [ElectionVoterController::class, 'store']);
 $router->post('/elections/{electionId}/voters/{id}/channel', [ElectionVoterController::class, 'updateChannel']);
 $router->post('/elections/{electionId}/voters/{id}/delete', [ElectionVoterController::class, 'destroy']);
+
+$router->get('/tps-voting', [VotingController::class, 'index']);
+$router->get('/elections/{electionId}/tps-voting', [VotingController::class, 'searchVoter']);
+$router->get('/elections/{electionId}/tps-voting/success', [VotingController::class, 'success']);
+$router->get('/elections/{electionId}/tps-voting/{electionVoterId}/ballot', [VotingController::class, 'ballot']);
+$router->post('/elections/{electionId}/tps-voting/{electionVoterId}/submit', [VotingController::class, 'submit']);

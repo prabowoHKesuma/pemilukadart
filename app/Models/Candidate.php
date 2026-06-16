@@ -146,4 +146,39 @@ class Candidate
 
         return $stmt->execute([$id]);
     }
+
+    public static function activeByElection(int $electionId): array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare("
+            SELECT *
+            FROM candidates
+            WHERE election_id = ?
+            AND is_active = 1
+            ORDER BY number_order ASC, name ASC
+        ");
+
+        $stmt->execute([$electionId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function findActiveForVote(\PDO $pdo, int $electionId, int $candidateId): ?array
+    {
+        $stmt = $pdo->prepare("
+            SELECT *
+            FROM candidates
+            WHERE election_id = ?
+            AND id = ?
+            AND is_active = 1
+            LIMIT 1
+        ");
+
+        $stmt->execute([$electionId, $candidateId]);
+
+        $candidate = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $candidate ?: null;
+    }
 }
