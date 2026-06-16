@@ -58,7 +58,7 @@ $success = Session::flash('success');
                     Dashboard
                 </a>
 
-                <a href="#" class="list-group-item list-group-item-action disabled">
+                <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections" class="list-group-item list-group-item-action">
                     Pemilihan
                 </a>
 
