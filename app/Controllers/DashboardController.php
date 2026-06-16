@@ -11,8 +11,11 @@ class DashboardController extends Controller
     {
         Auth::requireLogin();
 
+        $data['logo'] = '/pemilukadart/public/assets/images/logo_pilkadart11.png';
+
         $this->view('dashboard/index', [
-            'title' => 'Dashboard'
+            'title' => 'Dashboard',
+            'logo' => $data['logo'] 
         ]);
     }
 }
