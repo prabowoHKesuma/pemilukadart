@@ -5,6 +5,7 @@ use App\Controllers\DashboardController;
 use App\Controllers\ElectionController;
 use App\Controllers\CandidateController;
 use App\Controllers\VoterController;
+use App\Controllers\ElectionVoterController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -33,3 +34,9 @@ $router->post('/voters/store', [VoterController::class, 'store']);
 $router->get('/voters/{id}/edit', [VoterController::class, 'edit']);
 $router->post('/voters/{id}/update', [VoterController::class, 'update']);
 $router->post('/voters/{id}/delete', [VoterController::class, 'destroy']);
+
+$router->get('/elections/{electionId}/voters', [ElectionVoterController::class, 'index']);
+$router->get('/elections/{electionId}/voters/create', [ElectionVoterController::class, 'create']);
+$router->post('/elections/{electionId}/voters/store', [ElectionVoterController::class, 'store']);
+$router->post('/elections/{electionId}/voters/{id}/channel', [ElectionVoterController::class, 'updateChannel']);
+$router->post('/elections/{electionId}/voters/{id}/delete', [ElectionVoterController::class, 'destroy']);

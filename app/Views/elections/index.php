@@ -88,6 +88,12 @@ use App\Core\Env;
                                             Kandidat
                                         </a>
                                         <a 
+                                            href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/voters" 
+                                            class="btn btn-sm btn-secondary"
+                                        >
+                                            Pemilih
+                                        </a>
+                                        <a 
                                             href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/edit" 
                                             class="btn btn-sm btn-warning"
                                         >
