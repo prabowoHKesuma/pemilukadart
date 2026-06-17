@@ -51,9 +51,9 @@ $router->get('/tps-voting', [VotingController::class, 'index']);
 $router->get('/elections/{electionId}/tps-voting', [VotingController::class, 'searchVoter']);
 $router->post('/elections/{electionId}/tps-voting/{electionVoterId}/generate-code', [VotingController::class, 'generateBoothCode']);
 $router->post('/elections/{electionId}/tps-voting/booth-token/{tokenId}/revoke', [VotingController::class, 'revokeBoothCode']);
-$router->get('/elections/{electionId}/tps-voting/success', [VotingController::class, 'success']);
-$router->get('/elections/{electionId}/tps-voting/{electionVoterId}/ballot', [VotingController::class, 'ballot']);
-$router->post('/elections/{electionId}/tps-voting/{electionVoterId}/submit', [VotingController::class, 'submit']);
+//$router->get('/elections/{electionId}/tps-voting/success', [VotingController::class, 'success']);
+//$router->get('/elections/{electionId}/tps-voting/{electionVoterId}/ballot', [VotingController::class, 'ballot']);
+//$router->post('/elections/{electionId}/tps-voting/{electionVoterId}/submit', [VotingController::class, 'submit']);
 
 $router->get('/results', [ResultController::class, 'index']);
 $router->get('/elections/{electionId}/results/print', [ResultController::class, 'printReport']);
