@@ -81,6 +81,11 @@ $success = Session::flash('success');
                 <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/results" class="list-group-item list-group-item-action">
                     Hasil
                 </a>
+                <?php if (($user['role'] ?? '') === 'superadmin'): ?>
+                    <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/audit-logs" class="list-group-item list-group-item-action">
+                        Audit Log
+                    </a>
+                <?php endif; ?>
             </div>
         </aside>
 

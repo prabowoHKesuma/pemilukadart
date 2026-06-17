@@ -6,6 +6,7 @@ use App\Core\Auth;
 use App\Core\Controller;
 use App\Models\Election;
 use App\Models\Result;
+use App\Models\AuditLog;
 
 class ResultController extends Controller
 {
@@ -36,6 +37,11 @@ class ResultController extends Controller
         $candidateResults = Result::votesByCandidate((int) $electionId);
         $channelResults = Result::votesByChannel((int) $electionId);
         $turnoutByChannel = Result::turnoutByChannel((int) $electionId);
+
+        AuditLog::record(
+            'result_view',
+            'Membuka detail hasil election ID ' . $electionId
+        );
 
         $this->view('results/show', [
             'title' => 'Detail Hasil Pemilihan',

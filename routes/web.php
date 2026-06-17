@@ -8,6 +8,7 @@ use App\Controllers\VoterController;
 use App\Controllers\ElectionVoterController;
 use App\Controllers\VotingController;
 use App\Controllers\ResultController;
+use App\Controllers\AuditLogController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -51,3 +52,5 @@ $router->post('/elections/{electionId}/tps-voting/{electionVoterId}/submit', [Vo
 
 $router->get('/results', [ResultController::class, 'index']);
 $router->get('/elections/{electionId}/results', [ResultController::class, 'show']);
+
+$router->get('/audit-logs', [AuditLogController::class, 'index']);

@@ -10,6 +10,7 @@ use App\Core\Redirect;
 use App\Core\Session;
 use App\Models\Candidate;
 use App\Models\Election;
+use App\Models\AuditLog;
 
 class CandidateController extends Controller
 {
@@ -104,6 +105,11 @@ class CandidateController extends Controller
             'mission' => $mission !== '' ? $mission : null,
             'is_active' => $isActive,
         ]);
+
+        AuditLog::record(
+            'candidate_create',
+            'Menambahkan kandidat "' . $name . '" nomor urut ' . $numberOrder . ' pada election ID ' . $electionId
+        );
 
         Session::flash('success', 'Data kandidat berhasil ditambahkan.');
         Redirect::to('/elections/' . $electionId . '/candidates');
@@ -202,6 +208,11 @@ class CandidateController extends Controller
             'is_active' => $isActive,
         ]);
 
+        AuditLog::record(
+            'candidate_update',
+            'Memperbarui kandidat ID ' . $id . ' menjadi "' . $name . '" nomor urut ' . $numberOrder . ' pada election ID ' . $electionId
+        );
+
         Session::flash('success', 'Data kandidat berhasil diperbarui.');
         Redirect::to('/elections/' . $electionId . '/candidates');
     }
@@ -233,6 +244,11 @@ class CandidateController extends Controller
         Candidate::delete((int) $id);
 
         $this->deleteOldPhoto($candidate['photo']);
+
+        AuditLog::record(
+            'candidate_delete',
+            'Menghapus kandidat ID ' . $id . ' "' . $candidate['name'] . '" pada election ID ' . $electionId
+        );
 
         Session::flash('success', 'Data kandidat berhasil dihapus.');
         Redirect::to('/elections/' . $electionId . '/candidates');

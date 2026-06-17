@@ -8,6 +8,7 @@ use App\Core\Csrf;
 use App\Core\Redirect;
 use App\Core\Session;
 use App\Models\Election;
+use App\Models\AuditLog;
 
 class ElectionController extends Controller
 {
@@ -66,6 +67,11 @@ class ElectionController extends Controller
             'end_at' => $endAt,
             'created_by' => Auth::id(),
         ]);
+
+        AuditLog::record(
+            'election_create',
+            'Membuat pemilihan: ' . $title . ' dengan status ' . $status
+        );
 
         Session::flash('success', 'Data pemilihan berhasil ditambahkan.');
         Redirect::to('/elections');
@@ -129,6 +135,11 @@ class ElectionController extends Controller
             'end_at' => $endAt,
         ]);
 
+        AuditLog::record(
+            'election_update',
+            'Memperbarui pemilihan ID ' . $id . ': ' . $title . ' dengan status ' . $status
+        );
+
         Session::flash('success', 'Data pemilihan berhasil diperbarui.');
         Redirect::to('/elections');
     }
@@ -151,6 +162,11 @@ class ElectionController extends Controller
         }
 
         Election::delete((int) $id);
+
+        AuditLog::record(
+            'election_delete',
+            'Menghapus pemilihan ID ' . $id . ': ' . $election['title']
+        );
 
         Session::flash('success', 'Data pemilihan berhasil dihapus.');
         Redirect::to('/elections');
@@ -176,6 +192,11 @@ class ElectionController extends Controller
         }
 
         Election::updateStatus((int) $id, $status);
+
+        AuditLog::record(
+            'election_status_update',
+            'Mengubah status pemilihan ID ' . $id . ' dari ' . $election['status'] . ' ke ' . $status
+        );
 
         Session::flash('success', 'Status pemilihan berhasil diubah.');
         Redirect::to('/elections');

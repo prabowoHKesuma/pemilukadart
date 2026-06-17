@@ -9,6 +9,7 @@ use App\Core\Env;
 use App\Core\Redirect;
 use App\Core\Session;
 use App\Models\Voter;
+use App\Models\AuditLog;
 
 class VoterController extends Controller
 {
@@ -91,6 +92,11 @@ class VoterController extends Controller
             'rw' => $rw !== '' ? $rw : null,
             'is_active' => $isActive,
         ]);
+
+        AuditLog::record(
+            'voter_create',
+            'Menambahkan pemilih: ' . $name . ' dengan kode ' . $voterCode
+        );
 
         Session::flash('success', 'Data pemilih berhasil ditambahkan.');
         Redirect::to('/voters');
@@ -190,6 +196,11 @@ class VoterController extends Controller
             'is_active' => $isActive,
         ]);
 
+        AuditLog::record(
+            'voter_update',
+            'Memperbarui pemilih ID ' . $id . ': ' . $name . ' dengan kode ' . $voterCode
+        );
+
         Session::flash('success', 'Data pemilih berhasil diperbarui.');
         Redirect::to('/voters');
     }
@@ -212,6 +223,11 @@ class VoterController extends Controller
         }
 
         Voter::delete((int) $id);
+
+        AuditLog::record(
+            'voter_delete',
+            'Menghapus pemilih ID ' . $id . ': ' . $voter['name'] . ' dengan kode ' . $voter['voter_code']
+        );
 
         Session::flash('success', 'Data pemilih berhasil dihapus.');
         Redirect::to('/voters');

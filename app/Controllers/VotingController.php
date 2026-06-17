@@ -14,6 +14,7 @@ use App\Models\Candidate;
 use App\Models\Election;
 use App\Models\ElectionVoter;
 use Throwable;
+use App\Models\AuditLog;
 
 class VotingController extends Controller
 {
@@ -183,6 +184,11 @@ class VotingController extends Controller
             ElectionVoter::markVoted($pdo, (int) $electionVoterId);
 
             $pdo->commit();
+
+            AuditLog::record(
+                'vote_tps_success',
+                'Suara TPS berhasil disimpan untuk election ID ' . $electionId . '.'
+            );
 
             Session::flash('success', 'Suara berhasil disimpan. Terima kasih.');
             Redirect::to('/elections/' . $electionId . '/tps-voting/success');

@@ -10,6 +10,7 @@ use App\Core\Session;
 use App\Models\Election;
 use App\Models\ElectionVoter;
 use App\Models\Voter;
+use App\Models\AuditLog;
 
 class ElectionVoterController extends Controller
 {
@@ -120,6 +121,11 @@ class ElectionVoterController extends Controller
         }
 
         if ($successCount > 0) {
+            AuditLog::record(
+                'election_voter_assign',
+                'Menambahkan ' . $successCount . ' pemilih ke election ID ' . $electionId . ' dengan channel ' . $allowedChannel . '. Dilewati: ' . $skippedCount
+            );
+
             Session::flash('success', "{$successCount} pemilih berhasil ditambahkan. {$skippedCount} data dilewati.");
         } else {
             Session::flash('error', 'Tidak ada pemilih yang berhasil ditambahkan.');
@@ -166,6 +172,11 @@ class ElectionVoterController extends Controller
 
         ElectionVoter::updateChannel((int) $id, $allowedChannel);
 
+        AuditLog::record(
+            'election_voter_channel_update',
+            'Mengubah channel election_voter ID ' . $id . ' pada election ID ' . $electionId . ' menjadi ' . $allowedChannel
+        );
+
         Session::flash('success', 'Channel pemilih berhasil diperbarui.');
         Redirect::to('/elections/' . $electionId . '/voters');
     }
@@ -200,6 +211,11 @@ class ElectionVoterController extends Controller
         }
 
         ElectionVoter::delete((int) $id);
+
+        AuditLog::record(
+            'election_voter_remove',
+            'Menghapus election_voter ID ' . $id . ' dari election ID ' . $electionId
+        );
 
         Session::flash('success', 'Pemilih berhasil dihapus dari daftar pemilihan.');
         Redirect::to('/elections/' . $electionId . '/voters');
