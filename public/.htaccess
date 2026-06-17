@@ -1,6 +1,16 @@
+Options -Indexes
+
 RewriteEngine On
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
 RewriteRule ^ index.php [QSA,L]
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(env|sql|log|bak|zip|tar|gz)$">
+    Require all denied
+</FilesMatch>
