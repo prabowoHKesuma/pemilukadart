@@ -17,15 +17,21 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
                 </p>
 
                 <p class="text-muted">
-                    Pemilihan: <strong><?= htmlspecialchars($election['title']) ?></strong>
+                    Silakan keluar dari bilik. Komputer akan kembali ke halaman input kode.
                 </p>
 
                 <hr>
 
-                <a href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/tps-voting" class="btn btn-primary btn-lg">
-                    Kembali ke Pencarian Pemilih
+                <a href="<?= htmlspecialchars($appUrl) ?>/tps-booth" class="btn btn-primary btn-lg">
+                    Kembali ke Input Kode
                 </a>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+setTimeout(function () {
+    window.location.href = "<?= htmlspecialchars($appUrl) ?>/tps-booth";
+}, 5000);
+</script>

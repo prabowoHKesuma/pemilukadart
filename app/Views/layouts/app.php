@@ -71,7 +71,11 @@ $success = Session::flash('success');
                 </a>
 
                 <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/tps-voting" class="list-group-item list-group-item-action">
-                    Voting TPS
+                    Validasi TPS
+                </a>
+
+                <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/tps-booth" target="_blank" class="list-group-item list-group-item-action">
+                    Bilik TPS
                 </a>
 
                 <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/remote-verifications" class="list-group-item list-group-item-action">

@@ -60,7 +60,7 @@ function percentValue(int $value, int $total): float
                         <th>Belum Coblos</th>
                         <th>Suara Masuk</th>
                         <th>Partisipasi</th>
-                        <th style="width: 120px;">Aksi</th>
+                        <th style="width: 220px;">Aksi</th>
                     </tr>
                     </thead>
 
@@ -136,12 +136,29 @@ function percentValue(int $value, int $total): float
                             </td>
 
                             <td>
-                                <a 
-                                    href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results" 
-                                    class="btn btn-sm btn-primary"
-                                >
-                                    Detail
-                                </a>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <a 
+                                        href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results" 
+                                        class="btn btn-sm btn-primary"
+                                    >
+                                        Detail
+                                    </a>
+
+                                    <a 
+                                        href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/print" 
+                                        class="btn btn-sm btn-dark"
+                                        target="_blank"
+                                    >
+                                        Cetak
+                                    </a>
+
+                                    <a 
+                                        href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/export-csv" 
+                                        class="btn btn-sm btn-success"
+                                    >
+                                        CSV
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>

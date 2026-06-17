@@ -15,6 +15,7 @@ use App\Models\Election;
 use App\Models\ElectionVoter;
 use Throwable;
 use App\Models\AuditLog;
+use App\Models\TpsBoothToken;
 
 class VotingController extends Controller
 {
@@ -54,10 +55,13 @@ class VotingController extends Controller
         }
 
         $this->view('voting_tps/search', [
-            'title' => 'Cari Pemilih TPS',
+            'title' => 'Validasi Pemilih TPS',
             'election' => $election,
             'keyword' => $keyword,
             'results' => $results,
+            'generatedBoothCode' => Session::flash('tps_booth_code'),
+            'generatedBoothVoter' => Session::flash('tps_booth_voter'),
+            'generatedBoothExpiresAt' => Session::flash('tps_booth_expires_at'),
         ]);
     }
 
@@ -107,11 +111,11 @@ class VotingController extends Controller
         }
 
         $this->view('voting_tps/ballot', [
-            'title' => 'Halaman Coblos',
+            'title' => 'Halaman Coblos TPS',
             'election' => $election,
             'electionVoter' => $electionVoter,
             'candidates' => $candidates,
-        ]);
+        ], 'tps');
     }
 
     public function submit(string $electionId, string $electionVoterId): void
@@ -221,6 +225,130 @@ class VotingController extends Controller
         $this->view('voting_tps/success', [
             'title' => 'Voting Berhasil',
             'election' => $election,
+        ], 'tps');
+    }
+
+    public function generateBoothCode(string $electionId, string $electionVoterId): void
+    {
+        Auth::requireRole(['superadmin', 'panitia']);
+        Csrf::verify();
+
+        $election = Election::find((int) $electionId);
+
+        if (!$election) {
+            http_response_code(404);
+            die('Data pemilihan tidak ditemukan.');
+        }
+
+        if ($election['status'] !== 'open') {
+            Session::flash('error', 'Kode bilik hanya bisa dibuat saat pemilihan berstatus OPEN.');
+            Redirect::to('/tps-voting');
+        }
+
+        $electionVoter = ElectionVoter::findDetailForVoting((int) $electionId, (int) $electionVoterId);
+
+        if (!$electionVoter) {
+            http_response_code(404);
+            die('Data pemilih tidak ditemukan dalam pemilihan ini.');
+        }
+
+        if ((int) $electionVoter['is_active'] !== 1) {
+            Session::flash('error', 'Pemilih ini nonaktif di master data.');
+            Redirect::to('/elections/' . $electionId . '/tps-voting');
+        }
+
+        if ((int) $electionVoter['has_voted'] === 1) {
+            Session::flash('error', 'Pemilih ini sudah mencoblos.');
+            Redirect::to('/elections/' . $electionId . '/tps-voting?q=' . urlencode($electionVoter['voter_code']));
+        }
+
+        if (!in_array($electionVoter['allowed_channel'], ['tps', 'both'], true)) {
+            Session::flash('error', 'Pemilih ini tidak diizinkan mencoblos melalui TPS.');
+            Redirect::to('/elections/' . $electionId . '/tps-voting?q=' . urlencode($electionVoter['voter_code']));
+        }
+
+        $activeToken = TpsBoothToken::activeByElectionVoter((int) $electionVoterId);
+
+        if ($activeToken) {
+            Session::flash('error', 'Pemilih ini masih punya kode bilik aktif. Revoke dulu atau tunggu expired.');
+            Redirect::to('/elections/' . $electionId . '/tps-voting?q=' . urlencode($electionVoter['voter_code']));
+        }
+
+        $expiresMinutes = (int) ($_POST['expires_minutes'] ?? 10);
+
+        if ($expiresMinutes < 3) {
+            $expiresMinutes = 3;
+        }
+
+        if ($expiresMinutes > 30) {
+            $expiresMinutes = 30;
+        }
+
+        do {
+            $plainCode = (string) random_int(100000, 999999);
+            $tokenHash = TpsBoothToken::hashCode($plainCode);
+        } while (TpsBoothToken::hashExists($tokenHash));
+
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+' . $expiresMinutes . ' minutes'));
+
+        TpsBoothToken::create([
+            'election_id' => (int) $electionId,
+            'election_voter_id' => (int) $electionVoterId,
+            'token_hash' => $tokenHash,
+            'expires_at' => $expiresAt,
+            'created_by' => Auth::id(),
         ]);
+
+        AuditLog::record(
+            'tps_booth_code_generate',
+            'Generate kode bilik TPS untuk election ID ' . $electionId . '. Expired: ' . $expiresAt
+        );
+
+        Session::flash('tps_booth_code', $plainCode);
+        Session::flash('tps_booth_voter', $electionVoter['name'] . ' / ' . $electionVoter['voter_code']);
+        Session::flash('tps_booth_expires_at', $expiresAt);
+        Session::flash('success', 'Kode bilik berhasil dibuat. Berikan kode ini ke pemilih.');
+
+        Redirect::to('/elections/' . $electionId . '/tps-voting?q=' . urlencode($electionVoter['voter_code']));
+    }
+
+    public function revokeBoothCode(string $electionId, string $tokenId): void
+    {
+        Auth::requireRole(['superadmin', 'panitia']);
+        Csrf::verify();
+
+        $election = Election::find((int) $electionId);
+
+        if (!$election) {
+            http_response_code(404);
+            die('Data pemilihan tidak ditemukan.');
+        }
+
+        $token = TpsBoothToken::find((int) $tokenId);
+
+        if (!$token || (int) $token['election_id'] !== (int) $electionId) {
+            http_response_code(404);
+            die('Kode bilik tidak ditemukan.');
+        }
+
+        if ($token['used_at']) {
+            Session::flash('error', 'Kode bilik tidak bisa direvoke karena sudah digunakan.');
+            Redirect::to('/elections/' . $electionId . '/tps-voting');
+        }
+
+        if ($token['revoked_at']) {
+            Session::flash('error', 'Kode bilik sudah direvoke sebelumnya.');
+            Redirect::to('/elections/' . $electionId . '/tps-voting');
+        }
+
+        TpsBoothToken::revoke((int) $tokenId);
+
+        AuditLog::record(
+            'tps_booth_code_revoke',
+            'Revoke kode bilik TPS ID ' . $tokenId . ' pada election ID ' . $electionId
+        );
+
+        Session::flash('success', 'Kode bilik berhasil direvoke.');
+        Redirect::to('/elections/' . $electionId . '/tps-voting');
     }
 }

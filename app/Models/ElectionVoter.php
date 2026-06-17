@@ -186,9 +186,20 @@ class ElectionVoter
                 v.phone,
                 v.rt,
                 v.rw,
-                v.is_active
+                v.is_active,
+
+                tbt.id AS active_booth_token_id,
+                tbt.expires_at AS active_booth_expires_at
+
             FROM election_voters ev
             JOIN voters v ON v.id = ev.voter_id
+
+            LEFT JOIN tps_booth_tokens tbt
+                ON tbt.election_voter_id = ev.id
+            AND tbt.used_at IS NULL
+            AND tbt.revoked_at IS NULL
+            AND tbt.expires_at > NOW()
+
             WHERE ev.election_id = ?
             AND (
                     v.voter_code LIKE ?

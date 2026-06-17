@@ -11,6 +11,7 @@ use App\Controllers\ResultController;
 use App\Controllers\AuditLogController;
 use App\Controllers\RemoteVerificationController;
 use App\Controllers\RemoteTokenController;
+use App\Controllers\TpsBoothController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -48,11 +49,15 @@ $router->post('/elections/{electionId}/voters/{id}/delete', [ElectionVoterContro
 
 $router->get('/tps-voting', [VotingController::class, 'index']);
 $router->get('/elections/{electionId}/tps-voting', [VotingController::class, 'searchVoter']);
+$router->post('/elections/{electionId}/tps-voting/{electionVoterId}/generate-code', [VotingController::class, 'generateBoothCode']);
+$router->post('/elections/{electionId}/tps-voting/booth-token/{tokenId}/revoke', [VotingController::class, 'revokeBoothCode']);
 $router->get('/elections/{electionId}/tps-voting/success', [VotingController::class, 'success']);
 $router->get('/elections/{electionId}/tps-voting/{electionVoterId}/ballot', [VotingController::class, 'ballot']);
 $router->post('/elections/{electionId}/tps-voting/{electionVoterId}/submit', [VotingController::class, 'submit']);
 
 $router->get('/results', [ResultController::class, 'index']);
+$router->get('/elections/{electionId}/results/print', [ResultController::class, 'printReport']);
+$router->get('/elections/{electionId}/results/export-csv', [ResultController::class, 'exportCsv']);
 $router->get('/elections/{electionId}/results', [ResultController::class, 'show']);
 
 $router->get('/audit-logs', [AuditLogController::class, 'index']);
@@ -75,3 +80,9 @@ $router->post('/elections/{electionId}/remote-tokens/{tokenId}/revoke', [RemoteT
 $router->get('/remote-vote/{plainToken}/success', [RemoteTokenController::class, 'success']);
 $router->get('/remote-vote/{plainToken}', [RemoteTokenController::class, 'showVote']);
 $router->post('/remote-vote/{plainToken}/submit', [RemoteTokenController::class, 'submitVote']);
+
+$router->get('/tps-booth', [TpsBoothController::class, 'index']);
+$router->post('/tps-booth/check', [TpsBoothController::class, 'checkCode']);
+$router->get('/tps-booth/ballot', [TpsBoothController::class, 'ballot']);
+$router->post('/tps-booth/submit', [TpsBoothController::class, 'submit']);
+$router->get('/tps-booth/success', [TpsBoothController::class, 'success']);

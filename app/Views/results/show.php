@@ -53,9 +53,26 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         </div>
     </div>
 
-    <a href="<?= htmlspecialchars($appUrl) ?>/results" class="btn btn-secondary">
-        Kembali
-    </a>
+    <div class="d-flex gap-2">
+        <a 
+            href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/print" 
+            class="btn btn-dark"
+            target="_blank"
+        >
+            Cetak Berita Acara
+        </a>
+
+        <a 
+            href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/export-csv" 
+            class="btn btn-success"
+        >
+            Export CSV
+        </a>
+
+        <a href="<?= htmlspecialchars($appUrl) ?>/results" class="btn btn-secondary">
+            Kembali
+        </a>
+    </div>
 </div>
 
 <?php if ($election['status'] === 'open'): ?>
