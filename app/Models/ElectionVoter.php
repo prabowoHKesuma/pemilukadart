@@ -271,4 +271,27 @@ class ElectionVoter
 
         return $stmt->execute([$electionVoterId]);
     }
+
+    public static function lockForRemoteVoting(\PDO $pdo, int $electionId, int $voterId): ?array
+    {
+        $stmt = $pdo->prepare("
+            SELECT 
+                ev.*,
+                v.is_active,
+                v.name,
+                v.voter_code
+            FROM election_voters ev
+            JOIN voters v ON v.id = ev.voter_id
+            WHERE ev.election_id = ?
+            AND ev.voter_id = ?
+            LIMIT 1
+            FOR UPDATE
+        ");
+
+        $stmt->execute([$electionId, $voterId]);
+
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
 }

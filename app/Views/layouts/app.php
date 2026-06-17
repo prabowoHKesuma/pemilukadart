@@ -78,6 +78,10 @@ $success = Session::flash('success');
                     Verifikasi Remote
                 </a>
 
+                <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/remote-tokens" class="list-group-item list-group-item-action">
+                    Token Remote
+                </a>
+                
                 <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/results" class="list-group-item list-group-item-action">
                     Hasil
                 </a>

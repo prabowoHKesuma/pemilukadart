@@ -99,6 +99,12 @@ use App\Core\Env;
                                         >
                                             Remote
                                         </a>
+                                        <a 
+                                            href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/remote-tokens" 
+                                            class="btn btn-sm btn-outline-success"
+                                        >
+                                            Token Remote
+                                        </a>
                                         <?php if ($election['status'] === 'open'): ?>
                                             <a 
                                                 href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/tps-voting" 

@@ -10,6 +10,7 @@ use App\Controllers\VotingController;
 use App\Controllers\ResultController;
 use App\Controllers\AuditLogController;
 use App\Controllers\RemoteVerificationController;
+use App\Controllers\RemoteTokenController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -65,3 +66,12 @@ $router->post('/elections/{electionId}/remote-verifications/{id}/upload', [Remot
 $router->post('/elections/{electionId}/remote-verifications/{id}/approve', [RemoteVerificationController::class, 'approve']);
 $router->post('/elections/{electionId}/remote-verifications/{id}/reject', [RemoteVerificationController::class, 'reject']);
 $router->get('/remote-verifications/{id}/file/{type}', [RemoteVerificationController::class, 'file']);
+
+$router->get('/remote-tokens', [RemoteTokenController::class, 'index']);
+$router->get('/elections/{electionId}/remote-tokens', [RemoteTokenController::class, 'election']);
+$router->post('/elections/{electionId}/remote-tokens/{remoteVerificationId}/generate', [RemoteTokenController::class, 'generate']);
+$router->post('/elections/{electionId}/remote-tokens/{tokenId}/revoke', [RemoteTokenController::class, 'revoke']);
+
+$router->get('/remote-vote/{plainToken}/success', [RemoteTokenController::class, 'success']);
+$router->get('/remote-vote/{plainToken}', [RemoteTokenController::class, 'showVote']);
+$router->post('/remote-vote/{plainToken}/submit', [RemoteTokenController::class, 'submitVote']);
