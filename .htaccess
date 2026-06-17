@@ -1,7 +1,18 @@
-<IfModule mod_authz_core.c>
-    Require all denied
-</IfModule>
+Options -Indexes
 
-<IfModule !mod_authz_core.c>
-    Deny from all
-</IfModule>
+RewriteEngine On
+
+# Lindungi file sensitif
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(env|sql|log|bak|zip|tar|gz)$">
+    Require all denied
+</FilesMatch>
+
+# Blok akses langsung ke folder internal
+RewriteRule ^(app|config|database|routes|storage)(/|$) - [F,L]
+
+# Kalau user buka root project, arahkan ke public
+RewriteRule ^$ public/ [L]
