@@ -93,6 +93,12 @@ use App\Core\Env;
                                         >
                                             Pemilih
                                         </a>
+                                        <a 
+                                            href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/remote-verifications" 
+                                            class="btn btn-sm btn-outline-primary"
+                                        >
+                                            Remote
+                                        </a>
                                         <?php if ($election['status'] === 'open'): ?>
                                             <a 
                                                 href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/tps-voting" 

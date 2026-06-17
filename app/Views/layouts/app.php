@@ -74,7 +74,7 @@ $success = Session::flash('success');
                     Voting TPS
                 </a>
 
-                <a href="#" class="list-group-item list-group-item-action disabled">
+                <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/remote-verifications" class="list-group-item list-group-item-action">
                     Verifikasi Remote
                 </a>
 

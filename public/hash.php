@@ -1,4 +1,4 @@
 <?php
 
-echo password_hash('admin123', PASSWORD_DEFAULT);
+echo password_hash('panitia123', PASSWORD_DEFAULT);
 

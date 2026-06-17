@@ -9,6 +9,7 @@ use App\Controllers\ElectionVoterController;
 use App\Controllers\VotingController;
 use App\Controllers\ResultController;
 use App\Controllers\AuditLogController;
+use App\Controllers\RemoteVerificationController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -54,3 +55,13 @@ $router->get('/results', [ResultController::class, 'index']);
 $router->get('/elections/{electionId}/results', [ResultController::class, 'show']);
 
 $router->get('/audit-logs', [AuditLogController::class, 'index']);
+
+$router->get('/remote-verifications', [RemoteVerificationController::class, 'index']);
+$router->get('/elections/{electionId}/remote-verifications', [RemoteVerificationController::class, 'election']);
+$router->get('/elections/{electionId}/remote-verifications/create', [RemoteVerificationController::class, 'create']);
+$router->post('/elections/{electionId}/remote-verifications/store', [RemoteVerificationController::class, 'store']);
+$router->get('/elections/{electionId}/remote-verifications/{id}', [RemoteVerificationController::class, 'show']);
+$router->post('/elections/{electionId}/remote-verifications/{id}/upload', [RemoteVerificationController::class, 'upload']);
+$router->post('/elections/{electionId}/remote-verifications/{id}/approve', [RemoteVerificationController::class, 'approve']);
+$router->post('/elections/{electionId}/remote-verifications/{id}/reject', [RemoteVerificationController::class, 'reject']);
+$router->get('/remote-verifications/{id}/file/{type}', [RemoteVerificationController::class, 'file']);
