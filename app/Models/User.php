@@ -12,9 +12,13 @@ class User
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare("
-            SELECT *
-            FROM users
-            WHERE username = ?
+            SELECT
+                u.*,
+                r.name AS role_name,
+                r.label AS role_label
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role_id
+            WHERE u.username = ?
             LIMIT 1
         ");
 
@@ -36,5 +40,24 @@ class User
         ");
 
         $stmt->execute([$id]);
+    }
+
+    public static function permissions(int $userId): array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare("
+            SELECT p.name
+            FROM users u
+            JOIN roles r ON r.id = u.role_id
+            JOIN role_permissions rp ON rp.role_id = r.id
+            JOIN permissions p ON p.id = rp.permission_id
+            WHERE u.id = ?
+            ORDER BY p.name ASC
+        ");
+
+        $stmt->execute([$userId]);
+
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 }
