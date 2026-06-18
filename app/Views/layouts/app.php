@@ -104,6 +104,11 @@ $success = Session::flash('success');
                         User Management
                     </a>
                 <?php endif; ?>
+                <?php if (Auth::can('manage_regions')): ?>
+                    <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/regions" class="list-group-item list-group-item-action">
+                        Region Management
+                    </a>
+                <?php endif; ?>
             </div>
         </aside>
 
