@@ -12,6 +12,7 @@ use App\Controllers\AuditLogController;
 use App\Controllers\RemoteVerificationController;
 use App\Controllers\RemoteTokenController;
 use App\Controllers\TpsBoothController;
+use App\Controllers\RoleController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -86,3 +87,10 @@ $router->post('/tps-booth/check', [TpsBoothController::class, 'checkCode']);
 $router->get('/tps-booth/ballot', [TpsBoothController::class, 'ballot']);
 $router->post('/tps-booth/submit', [TpsBoothController::class, 'submit']);
 $router->get('/tps-booth/success', [TpsBoothController::class, 'success']);
+
+$router->get('/roles', [RoleController::class, 'index']);
+$router->get('/roles/create', [RoleController::class, 'create']);
+$router->post('/roles/store', [RoleController::class, 'store']);
+$router->get('/roles/{id}/edit', [RoleController::class, 'edit']);
+$router->post('/roles/{id}/update', [RoleController::class, 'update']);
+$router->post('/roles/{id}/delete', [RoleController::class, 'destroy']);
