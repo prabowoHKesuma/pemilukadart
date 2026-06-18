@@ -14,6 +14,7 @@ use App\Controllers\RemoteTokenController;
 use App\Controllers\TpsBoothController;
 use App\Controllers\RoleController;
 use App\Controllers\UserController;
+use App\Controllers\RegionController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -102,3 +103,10 @@ $router->post('/users/store', [UserController::class, 'store']);
 $router->get('/users/{id}/edit', [UserController::class, 'edit']);
 $router->post('/users/{id}/update', [UserController::class, 'update']);
 $router->post('/users/{id}/delete', [UserController::class, 'destroy']);
+
+$router->get('/regions', [RegionController::class, 'index']);
+$router->get('/regions/create', [RegionController::class, 'create']);
+$router->post('/regions/store', [RegionController::class, 'store']);
+$router->get('/regions/{id}/edit', [RegionController::class, 'edit']);
+$router->post('/regions/{id}/update', [RegionController::class, 'update']);
+$router->post('/regions/{id}/delete', [RegionController::class, 'destroy']);
