@@ -13,6 +13,7 @@ use App\Controllers\RemoteVerificationController;
 use App\Controllers\RemoteTokenController;
 use App\Controllers\TpsBoothController;
 use App\Controllers\RoleController;
+use App\Controllers\UserController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -94,3 +95,10 @@ $router->post('/roles/store', [RoleController::class, 'store']);
 $router->get('/roles/{id}/edit', [RoleController::class, 'edit']);
 $router->post('/roles/{id}/update', [RoleController::class, 'update']);
 $router->post('/roles/{id}/delete', [RoleController::class, 'destroy']);
+
+$router->get('/users', [UserController::class, 'index']);
+$router->get('/users/create', [UserController::class, 'create']);
+$router->post('/users/store', [UserController::class, 'store']);
+$router->get('/users/{id}/edit', [UserController::class, 'edit']);
+$router->post('/users/{id}/update', [UserController::class, 'update']);
+$router->post('/users/{id}/delete', [UserController::class, 'destroy']);

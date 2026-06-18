@@ -99,6 +99,11 @@ $success = Session::flash('success');
                         Role Management
                     </a>
                 <?php endif; ?>
+                <?php if (Auth::can('manage_users')): ?>
+                    <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/users" class="list-group-item list-group-item-action">
+                        User Management
+                    </a>
+                <?php endif; ?>
             </div>
         </aside>
 
