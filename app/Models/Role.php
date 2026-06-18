@@ -232,4 +232,17 @@ class Role
 
         return $stmt->execute([$id]);
     }
+
+    public static function options(): array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->query("
+            SELECT id, name, label
+            FROM roles
+            ORDER BY is_system DESC, label ASC
+        ");
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
