@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Database;
+use App\Core\RegionScope;
 use PDO;
 
 class Election
@@ -11,18 +12,25 @@ class Election
     {
         $pdo = Database::connection();
 
-        $stmt = $pdo->query("
-            SELECT 
+        [$scopeSql, $scopeParams] = RegionScope::whereSql('e');
+
+        $stmt = $pdo->prepare("
+            SELECT
                 e.*,
                 o.name AS organization_name,
                 rg.code AS region_code,
                 rg.name AS region_name,
-                rg.level AS region_level
+                rg.level AS region_level,
+                u.name AS created_by_name
             FROM elections e
             LEFT JOIN organizations o ON o.id = e.organization_id
             LEFT JOIN regions rg ON rg.id = e.region_id
+            LEFT JOIN users u ON u.id = e.created_by
+            {$scopeSql}
             ORDER BY e.created_at DESC
         ");
+
+        $stmt->execute($scopeParams);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -30,6 +38,10 @@ class Election
     public static function find(int $id): ?array
     {
         $pdo = Database::connection();
+
+        [$scopeSql, $scopeParams] = RegionScope::andSql('e');
+
+        $params = array_merge([$id], $scopeParams);
 
         $stmt = $pdo->prepare("
             SELECT
@@ -42,10 +54,11 @@ class Election
             LEFT JOIN organizations o ON o.id = e.organization_id
             LEFT JOIN regions rg ON rg.id = e.region_id
             WHERE e.id = ?
+            {$scopeSql}
             LIMIT 1
         ");
 
-        $stmt->execute([$id]);
+        $stmt->execute($params);
 
         $election = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -152,22 +165,33 @@ class Election
     {
         $pdo = Database::connection();
 
-        $stmt = $pdo->query("
+        [$scopeSql, $scopeParams] = RegionScope::andSql('e');
+
+        $stmt = $pdo->prepare("
             SELECT 
                 e.*,
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level,
                 COUNT(DISTINCT c.id) AS total_candidates,
                 COUNT(DISTINCT ev.id) AS total_voters,
                 SUM(CASE WHEN ev.has_voted = 1 THEN 1 ELSE 0 END) AS total_voted
             FROM elections e
+            LEFT JOIN organizations o ON o.id = e.organization_id
+            LEFT JOIN regions rg ON rg.id = e.region_id
             LEFT JOIN candidates c 
                 ON c.election_id = e.id 
             AND c.is_active = 1
             LEFT JOIN election_voters ev 
                 ON ev.election_id = e.id
             WHERE e.status = 'open'
+            {$scopeSql}
             GROUP BY e.id
             ORDER BY e.start_at ASC, e.created_at DESC
         ");
+
+        $stmt->execute($scopeParams);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

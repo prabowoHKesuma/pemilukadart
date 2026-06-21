@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Database;
+use App\Core\RegionScope;
 use PDO;
 
 class VotingToken
@@ -11,7 +12,9 @@ class VotingToken
     {
         $pdo = Database::connection();
 
-        $stmt = $pdo->query("
+        [$scopeSql, $scopeParams] = RegionScope::whereSql('e');
+
+        $stmt = $pdo->prepare("
             SELECT
                 e.id,
                 e.title,
@@ -19,6 +22,11 @@ class VotingToken
                 e.status,
                 e.start_at,
                 e.end_at,
+
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level,
 
                 COALESCE(rv.total_approved, 0) AS total_approved,
                 COALESCE(vt.total_tokens, 0) AS total_tokens,
@@ -28,6 +36,9 @@ class VotingToken
                 COALESCE(vt.total_expired, 0) AS total_expired
 
             FROM elections e
+
+            LEFT JOIN organizations o ON o.id = e.organization_id
+            LEFT JOIN regions rg ON rg.id = e.region_id
 
             LEFT JOIN (
                 SELECT
@@ -45,8 +56,8 @@ class VotingToken
                     SUM(
                         CASE 
                             WHEN used_at IS NULL 
-                             AND revoked_at IS NULL 
-                             AND expires_at > NOW()
+                            AND revoked_at IS NULL 
+                            AND expires_at > NOW()
                             THEN 1 ELSE 0 
                         END
                     ) AS total_active,
@@ -55,8 +66,8 @@ class VotingToken
                     SUM(
                         CASE 
                             WHEN used_at IS NULL 
-                             AND revoked_at IS NULL 
-                             AND expires_at <= NOW()
+                            AND revoked_at IS NULL 
+                            AND expires_at <= NOW()
                             THEN 1 ELSE 0 
                         END
                     ) AS total_expired
@@ -64,8 +75,12 @@ class VotingToken
                 GROUP BY election_id
             ) vt ON vt.election_id = e.id
 
+            {$scopeSql}
+
             ORDER BY e.created_at DESC
         ");
+
+        $stmt->execute($scopeParams);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

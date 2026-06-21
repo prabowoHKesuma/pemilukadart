@@ -11,6 +11,7 @@ require_once __DIR__ . '/app/Core/View.php';
 require_once __DIR__ . '/app/Core/Redirect.php';
 require_once __DIR__ . '/app/Core/Csrf.php';
 require_once __DIR__ . '/app/Core/Auth.php';
+require_once __DIR__ . '/app/Core/RegionScope.php';
 
 use App\Core\Env;
 use App\Core\Session;

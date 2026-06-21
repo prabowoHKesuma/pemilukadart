@@ -107,4 +107,31 @@ class Auth
             die('Akses ditolak. Permission dibutuhkan: ' . htmlspecialchars($permission, ENT_QUOTES, 'UTF-8'));
         }
     }
+
+    public static function organizationId(): ?int
+    {
+        $user = self::user();
+
+        if (!$user || empty($user['organization_id'])) {
+            return null;
+        }
+
+        return (int) $user['organization_id'];
+    }
+
+    public static function regionId(): ?int
+    {
+        $user = self::user();
+
+        if (!$user || empty($user['region_id'])) {
+            return null;
+        }
+
+        return (int) $user['region_id'];
+    }
+
+    public static function isSuperadmin(): bool
+    {
+        return self::role() === 'superadmin';
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Database;
+use App\Core\RegionScope;
 use PDO;
 
 class Voter
@@ -11,7 +12,9 @@ class Voter
     {
         $pdo = Database::connection();
 
-        $stmt = $pdo->query("
+        [$scopeSql, $scopeParams] = RegionScope::whereSql('v');
+
+        $stmt = $pdo->prepare("
             SELECT
                 v.*,
                 o.name AS organization_name,
@@ -21,8 +24,11 @@ class Voter
             FROM voters v
             LEFT JOIN organizations o ON o.id = v.organization_id
             LEFT JOIN regions rg ON rg.id = v.region_id
+            {$scopeSql}
             ORDER BY v.name ASC
         ");
+
+        $stmt->execute($scopeParams);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -30,6 +36,10 @@ class Voter
     public static function find(int $id): ?array
     {
         $pdo = Database::connection();
+
+        [$scopeSql, $scopeParams] = RegionScope::andSql('v');
+
+        $params = array_merge([$id], $scopeParams);
 
         $stmt = $pdo->prepare("
             SELECT
@@ -42,10 +52,11 @@ class Voter
             LEFT JOIN organizations o ON o.id = v.organization_id
             LEFT JOIN regions rg ON rg.id = v.region_id
             WHERE v.id = ?
+            {$scopeSql}
             LIMIT 1
         ");
 
-        $stmt->execute([$id]);
+        $stmt->execute($params);
 
         $voter = $stmt->fetch(PDO::FETCH_ASSOC);
 

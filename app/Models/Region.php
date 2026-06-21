@@ -271,4 +271,37 @@ class Region
 
         return $stmt->execute([$id]);
     }
+
+    public static function descendantsIncludingSelf(int $regionId): array
+    {
+        $pdo = Database::connection();
+
+        $ids = [$regionId];
+        $queue = [$regionId];
+
+        while (!empty($queue)) {
+            $currentId = array_shift($queue);
+
+            $stmt = $pdo->prepare("
+                SELECT id
+                FROM regions
+                WHERE parent_id = ?
+            ");
+
+            $stmt->execute([$currentId]);
+
+            $children = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            foreach ($children as $childId) {
+                $childId = (int) $childId;
+
+                if (!in_array($childId, $ids, true)) {
+                    $ids[] = $childId;
+                    $queue[] = $childId;
+                }
+            }
+        }
+
+        return $ids;
+    }
 }

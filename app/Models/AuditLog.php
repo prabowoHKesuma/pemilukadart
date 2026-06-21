@@ -6,6 +6,7 @@ use App\Core\Auth;
 use App\Core\Database;
 use PDO;
 use Throwable;
+use App\Core\RegionScope;
 
 class AuditLog
 {
@@ -85,6 +86,20 @@ class AuditLog
         if (!empty($filters['date_to'])) {
             $where[] = "DATE(al.created_at) <= ?";
             $params[] = $filters['date_to'];
+        }
+
+        if (!RegionScope::isUnrestricted()) {
+            $allowedRegionIds = RegionScope::allowedRegionIds();
+
+            if (empty($allowedRegionIds)) {
+                $where[] = "1 = 0";
+            } else {
+                $placeholders = implode(',', array_fill(0, count($allowedRegionIds), '?'));
+                $where[] = "(al.region_id IN ($placeholders) OR al.region_id IS NULL)";
+                foreach ($allowedRegionIds as $regionId) {
+                    $params[] = $regionId;
+                }
+            }
         }
 
         $whereSql = '';
