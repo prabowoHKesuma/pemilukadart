@@ -9,6 +9,8 @@ use App\Core\Redirect;
 use App\Core\Session;
 use App\Models\Election;
 use App\Models\AuditLog;
+use App\Models\Organization;
+use App\Models\Region;
 
 class ElectionController extends Controller
 {
@@ -30,6 +32,8 @@ class ElectionController extends Controller
 
         $this->view('elections/create', [
             'title' => 'Tambah Pemilihan',
+            'organizations' => Organization::options(),
+            'regions' => Region::options(),
         ]);
     }
 
@@ -39,6 +43,8 @@ class ElectionController extends Controller
         Csrf::verify();
 
         $title = trim($_POST['title'] ?? '');
+        $organizationId = !empty($_POST['organization_id']) ? (int) $_POST['organization_id'] : null;
+        $regionId = !empty($_POST['region_id']) ? (int) $_POST['region_id'] : null;
         $description = trim($_POST['description'] ?? '');
         $status = $_POST['status'] ?? 'draft';
         $startAt = $this->normalizeDateTime($_POST['start_at'] ?? null);
@@ -59,8 +65,33 @@ class ElectionController extends Controller
             Redirect::to('/elections/create');
         }
 
+        if ($regionId) {
+            $region = Region::find($regionId);
+
+            if (!$region) {
+                Session::flash('error', 'Wilayah tidak valid.');
+                Redirect::to('/elections/create');
+            }
+
+            if ($organizationId && (int) $region['organization_id'] !== (int) $organizationId) {
+                Session::flash('error', 'Wilayah tidak sesuai dengan organization.');
+                Redirect::to('/elections/create');
+            }
+
+            if (!$organizationId) {
+                $organizationId = (int) $region['organization_id'];
+            }
+        }
+
+        if ($organizationId && !Organization::find($organizationId)) {
+            Session::flash('error', 'Organization tidak valid.');
+            Redirect::to('/elections/create');
+        }
+
         Election::create([
             'title' => $title,
+            'organization_id' => $organizationId,
+            'region_id' => $regionId,
             'description' => $description !== '' ? $description : null,
             'status' => $status,
             'start_at' => $startAt,
@@ -91,6 +122,8 @@ class ElectionController extends Controller
         $this->view('elections/edit', [
             'title' => 'Edit Pemilihan',
             'election' => $election,
+            'organizations' => Organization::options(),
+            'regions' => Region::options(),
         ]);
     }
 
@@ -111,6 +144,31 @@ class ElectionController extends Controller
         $status = $_POST['status'] ?? 'draft';
         $startAt = $this->normalizeDateTime($_POST['start_at'] ?? null);
         $endAt = $this->normalizeDateTime($_POST['end_at'] ?? null);
+        $organizationId = !empty($_POST['organization_id']) ? (int) $_POST['organization_id'] : null;
+        $regionId = !empty($_POST['region_id']) ? (int) $_POST['region_id'] : null;
+
+        if ($regionId) {
+            $region = Region::find($regionId);
+
+            if (!$region) {
+                Session::flash('error', 'Wilayah tidak valid.');
+                Redirect::to('/elections/' . $id . '/edit');
+            }
+
+            if ($organizationId && (int) $region['organization_id'] !== (int) $organizationId) {
+                Session::flash('error', 'Wilayah tidak sesuai dengan organization.');
+                Redirect::to('/elections/' . $id . '/edit');
+            }
+
+            if (!$organizationId) {
+                $organizationId = (int) $region['organization_id'];
+            }
+        }
+
+        if ($organizationId && !Organization::find($organizationId)) {
+            Session::flash('error', 'Organization tidak valid.');
+            Redirect::to('/elections/' . $id . '/edit');
+        }
 
         if ($title === '') {
             Session::flash('error', 'Nama pemilihan wajib diisi.');
@@ -129,6 +187,8 @@ class ElectionController extends Controller
 
         Election::update((int) $id, [
             'title' => $title,
+            'organization_id' => $organizationId ?? null,
+            'region_id' => $regionId ?? null,
             'description' => $description !== '' ? $description : null,
             'status' => $status,
             'start_at' => $startAt,

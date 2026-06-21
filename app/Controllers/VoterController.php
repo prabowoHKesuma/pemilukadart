@@ -10,6 +10,8 @@ use App\Core\Redirect;
 use App\Core\Session;
 use App\Models\Voter;
 use App\Models\AuditLog;
+use App\Models\Organization;
+use App\Models\Region;
 
 class VoterController extends Controller
 {
@@ -31,6 +33,8 @@ class VoterController extends Controller
 
         $this->view('voters/create', [
             'title' => 'Tambah Pemilih',
+            'organizations' => Organization::options(),
+            'regions' => Region::options(),
         ]);
     }
 
@@ -40,6 +44,8 @@ class VoterController extends Controller
         Csrf::verify();
 
         $voterCode = strtoupper(trim($_POST['voter_code'] ?? ''));
+        $organizationId = !empty($_POST['organization_id']) ? (int) $_POST['organization_id'] : null;
+        $regionId = !empty($_POST['region_id']) ? (int) $_POST['region_id'] : null;
         $name = trim($_POST['name'] ?? '');
         $nik = $this->onlyDigits($_POST['nik'] ?? '');
         $kk = $this->onlyDigits($_POST['kk'] ?? '');
@@ -81,8 +87,33 @@ class VoterController extends Controller
             Redirect::to('/voters/create');
         }
 
+        if ($regionId) {
+            $region = Region::find($regionId);
+
+            if (!$region) {
+                Session::flash('error', 'Wilayah tidak valid.');
+                Redirect::to('/voters/create');
+            }
+
+            if ($organizationId && (int) $region['organization_id'] !== (int) $organizationId) {
+                Session::flash('error', 'Wilayah tidak sesuai dengan organization.');
+                Redirect::to('/voters/create');
+            }
+
+            if (!$organizationId) {
+                $organizationId = (int) $region['organization_id'];
+            }
+        }
+
+        if ($organizationId && !Organization::find($organizationId)) {
+            Session::flash('error', 'Organization tidak valid.');
+            Redirect::to('/voters/create');
+        }
+
         Voter::create([
             'voter_code' => $voterCode,
+            'organization_id' => $organizationId,
+            'region_id' => $regionId,
             'name' => $name,
             'nik_hash' => $nikHash,
             'kk_hash' => $kkHash,
@@ -116,6 +147,8 @@ class VoterController extends Controller
         $this->view('voters/edit', [
             'title' => 'Edit Pemilih',
             'voter' => $voter,
+            'organizations' => Organization::options(),
+            'regions' => Region::options(),
         ]);
     }
 
@@ -132,6 +165,8 @@ class VoterController extends Controller
         }
 
         $voterCode = strtoupper(trim($_POST['voter_code'] ?? ''));
+        $organizationId = !empty($_POST['organization_id']) ? (int) $_POST['organization_id'] : null;
+        $regionId = !empty($_POST['region_id']) ? (int) $_POST['region_id'] : null;
         $name = trim($_POST['name'] ?? '');
         $nik = $this->onlyDigits($_POST['nik'] ?? '');
         $kk = $this->onlyDigits($_POST['kk'] ?? '');
@@ -184,8 +219,33 @@ class VoterController extends Controller
             $kkHash = $this->hashIdentity($kk);
         }
 
+        if ($regionId) {
+            $region = Region::find($regionId);
+
+            if (!$region) {
+                Session::flash('error', 'Wilayah tidak valid.');
+                Redirect::to('/voters/' . $id . '/edit');
+            }
+
+            if ($organizationId && (int) $region['organization_id'] !== (int) $organizationId) {
+                Session::flash('error', 'Wilayah tidak sesuai dengan organization.');
+                Redirect::to('/voters/' . $id . '/edit');
+            }
+
+            if (!$organizationId) {
+                $organizationId = (int) $region['organization_id'];
+            }
+        }
+
+        if ($organizationId && !Organization::find($organizationId)) {
+            Session::flash('error', 'Organization tidak valid.');
+            Redirect::to('/voters/' . $id . '/edit');
+        }
+
         Voter::update((int) $id, [
             'voter_code' => $voterCode,
+            'organization_id' => $organizationId,
+            'region_id' => $regionId,
             'name' => $name,
             'nik_hash' => $nikHash,
             'kk_hash' => $kkHash,

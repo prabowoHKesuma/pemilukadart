@@ -48,6 +48,8 @@ class Auth
             'role_id' => $user['role_id'] ?? null,
             'role' => $roleName,
             'role_label' => $roleLabel,
+            'organization_id' => $user['organization_id'] ?? null,
+            'region_id' => $user['region_id'] ?? null,
             'permissions' => $permissions,
         ]);
     }

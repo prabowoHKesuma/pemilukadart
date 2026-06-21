@@ -78,6 +78,53 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
                 <?php endif; ?>
             </div>
 
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Organization</label>
+                    <select name="organization_id" class="form-select" <?= $isSelf ? 'disabled' : '' ?>>
+                        <option value="">-- Pilih Organization --</option>
+
+                        <?php foreach ($organizations as $organization): ?>
+                            <option 
+                                value="<?= htmlspecialchars((string) $organization['id']) ?>"
+                                <?= (int) ($userData['organization_id'] ?? 0) === (int) $organization['id'] ? 'selected' : '' ?>
+                            >
+                                <?= htmlspecialchars($organization['name']) ?> (<?= htmlspecialchars($organization['type']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <?php if ($isSelf): ?>
+                        <input type="hidden" name="organization_id" value="<?= htmlspecialchars((string) ($userData['organization_id'] ?? '')) ?>">
+                    <?php endif; ?>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Wilayah / Region</label>
+                    <select name="region_id" class="form-select" <?= $isSelf ? 'disabled' : '' ?>>
+                        <option value="">-- Pilih Wilayah --</option>
+
+                        <?php foreach ($regions as $region): ?>
+                            <option 
+                                value="<?= htmlspecialchars((string) $region['id']) ?>"
+                                <?= (int) ($userData['region_id'] ?? 0) === (int) $region['id'] ? 'selected' : '' ?>
+                            >
+                                [<?= htmlspecialchars($region['organization_name']) ?>]
+                                <?= htmlspecialchars(strtoupper($region['level'])) ?>
+                                -
+                                <?= htmlspecialchars($region['code']) ?>
+                                -
+                                <?= htmlspecialchars($region['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <?php if ($isSelf): ?>
+                        <input type="hidden" name="region_id" value="<?= htmlspecialchars((string) ($userData['region_id'] ?? '')) ?>">
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <div class="form-check mb-3">
                 <input 
                     type="checkbox" 

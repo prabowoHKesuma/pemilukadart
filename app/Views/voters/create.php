@@ -58,6 +58,43 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
 
             <div class="row">
                 <div class="col-md-6 mb-3">
+                    <label class="form-label">Organization</label>
+                    <select name="organization_id" class="form-select">
+                        <option value="">-- Pilih Organization --</option>
+
+                        <?php foreach ($organizations as $organization): ?>
+                            <option value="<?= htmlspecialchars((string) $organization['id']) ?>">
+                                <?= htmlspecialchars($organization['name']) ?> (<?= htmlspecialchars($organization['type']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Wilayah / Region</label>
+                    <select name="region_id" class="form-select">
+                        <option value="">-- Pilih Wilayah --</option>
+
+                        <?php foreach ($regions as $region): ?>
+                            <option value="<?= htmlspecialchars((string) $region['id']) ?>">
+                                [<?= htmlspecialchars($region['organization_name']) ?>]
+                                <?= htmlspecialchars(strtoupper($region['level'])) ?>
+                                -
+                                <?= htmlspecialchars($region['code']) ?>
+                                -
+                                <?= htmlspecialchars($region['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <div class="form-text">
+                        Untuk pemilih RT, pilih wilayah RT-nya.
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
                     <label class="form-label">NIK</label>
                     <input 
                         type="text" 
