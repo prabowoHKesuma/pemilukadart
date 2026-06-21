@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Database;
+use App\Core\RegionScope;
 use PDO;
 
 class RemoteVerification
@@ -11,7 +12,9 @@ class RemoteVerification
     {
         $pdo = Database::connection();
 
-        $stmt = $pdo->query("
+        [$scopeSql, $scopeParams] = RegionScope::whereSql('e');
+
+        $stmt = $pdo->prepare("
             SELECT
                 e.id,
                 e.title,
@@ -20,6 +23,11 @@ class RemoteVerification
                 e.start_at,
                 e.end_at,
 
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level,
+
                 COALESCE(ev.total_remote_eligible, 0) AS total_remote_eligible,
                 COALESCE(rv.total_requests, 0) AS total_requests,
                 COALESCE(rv.total_pending, 0) AS total_pending,
@@ -27,6 +35,9 @@ class RemoteVerification
                 COALESCE(rv.total_rejected, 0) AS total_rejected
 
             FROM elections e
+
+            LEFT JOIN organizations o ON o.id = e.organization_id
+            LEFT JOIN regions rg ON rg.id = e.region_id
 
             LEFT JOIN (
                 SELECT
@@ -48,8 +59,12 @@ class RemoteVerification
                 GROUP BY election_id
             ) rv ON rv.election_id = e.id
 
+            {$scopeSql}
+
             ORDER BY e.created_at DESC
         ");
+
+        $stmt->execute($scopeParams);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
