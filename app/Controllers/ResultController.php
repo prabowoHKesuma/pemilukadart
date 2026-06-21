@@ -12,7 +12,7 @@ class ResultController extends Controller
 {
     public function index(): void
     {
-        Auth::requireLogin();
+        Auth::requirePermission('view_results');
 
         $elections = Result::electionsWithStats();
 
@@ -24,13 +24,19 @@ class ResultController extends Controller
 
     public function show(string $electionId): void
     {
-        Auth::requireLogin();
+        Auth::requirePermission('view_results');
 
         $payload = $this->resultPayload((int) $electionId);
 
         AuditLog::record(
             'result_view',
-            'Membuka detail hasil election ID ' . $electionId
+            'Membuka detail hasil election ID ' . $electionId,
+            null,
+            [
+                'election_id' => (int) $electionId,
+                'organization_id' => $payload['election']['organization_id'] ?? null,
+                'region_id' => $payload['election']['region_id'] ?? null,
+            ]
         );
 
         $this->view('results/show', array_merge($payload, [
@@ -40,13 +46,19 @@ class ResultController extends Controller
 
     public function printReport(string $electionId): void
     {
-        Auth::requireLogin();
+        Auth::requirePermission('print_results');
 
         $payload = $this->resultPayload((int) $electionId);
 
         AuditLog::record(
             'result_print',
-            'Mencetak berita acara hasil election ID ' . $electionId
+            'Mencetak berita acara hasil election ID ' . $electionId,
+            null,
+            [
+                'election_id' => (int) $electionId,
+                'organization_id' => $payload['election']['organization_id'] ?? null,
+                'region_id' => $payload['election']['region_id'] ?? null,
+            ]
         );
 
         $this->view('results/print', array_merge($payload, [
@@ -56,7 +68,7 @@ class ResultController extends Controller
 
     public function exportCsv(string $electionId): void
     {
-        Auth::requireLogin();
+        Auth::requirePermission('print_results');
 
         $payload = $this->resultPayload((int) $electionId);
 

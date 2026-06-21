@@ -143,21 +143,22 @@ function percentValue(int $value, int $total): float
                                     >
                                         Detail
                                     </a>
+                                    <?php if (\App\Core\Auth::can('print_results')): ?>
+                                        <a 
+                                            href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/print" 
+                                            class="btn btn-sm btn-dark"
+                                            target="_blank"
+                                        >
+                                            Cetak
+                                        </a>
 
-                                    <a 
-                                        href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/print" 
-                                        class="btn btn-sm btn-dark"
-                                        target="_blank"
-                                    >
-                                        Cetak
-                                    </a>
-
-                                    <a 
-                                        href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/export-csv" 
-                                        class="btn btn-sm btn-success"
-                                    >
-                                        CSV
-                                    </a>
+                                        <a 
+                                            href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/export-csv" 
+                                            class="btn btn-sm btn-success"
+                                        >
+                                            CSV
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>

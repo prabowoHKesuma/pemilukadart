@@ -15,7 +15,7 @@ class RemoteVerificationController extends Controller
 {
     public function index(): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_verification');
 
         $elections = RemoteVerification::electionsWithStats();
 
@@ -27,7 +27,7 @@ class RemoteVerificationController extends Controller
 
     public function election(string $electionId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_verification');
 
         $election = Election::find((int) $electionId);
 
@@ -47,7 +47,7 @@ class RemoteVerificationController extends Controller
 
     public function create(string $electionId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_verification');
 
         $election = Election::find((int) $electionId);
 
@@ -72,7 +72,7 @@ class RemoteVerificationController extends Controller
 
     public function store(string $electionId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_verification');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);
@@ -127,7 +127,7 @@ class RemoteVerificationController extends Controller
 
     public function show(string $electionId, string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_verification');
 
         $election = Election::find((int) $electionId);
 
@@ -152,7 +152,7 @@ class RemoteVerificationController extends Controller
 
     public function upload(string $electionId, string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_verification');
         Csrf::verify();
 
         $request = RemoteVerification::find((int) $id);
@@ -196,7 +196,7 @@ class RemoteVerificationController extends Controller
 
     public function approve(string $electionId, string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_verification');
         Csrf::verify();
 
         $request = RemoteVerification::find((int) $id);
@@ -253,7 +253,7 @@ class RemoteVerificationController extends Controller
 
     public function reject(string $electionId, string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_verification');
         Csrf::verify();
 
         $request = RemoteVerification::find((int) $id);
@@ -288,7 +288,7 @@ class RemoteVerificationController extends Controller
 
     public function file(string $id, string $type): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_verification');
 
         $request = RemoteVerification::find((int) $id);
 

@@ -10,7 +10,7 @@ class AuditLogController extends Controller
 {
     public function index(): void
     {
-        Auth::requireRole(['superadmin']);
+        Auth::requirePermission('view_audit_logs');
 
         $filters = [
             'keyword' => trim($_GET['keyword'] ?? ''),
