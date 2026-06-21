@@ -22,7 +22,7 @@ class RemoteTokenController extends Controller
 {
     public function index(): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_token');
 
         $elections = VotingToken::electionsWithStats();
 
@@ -34,7 +34,7 @@ class RemoteTokenController extends Controller
 
     public function election(string $electionId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_token');
 
         $election = Election::find((int) $electionId);
 
@@ -59,7 +59,7 @@ class RemoteTokenController extends Controller
 
     public function generate(string $electionId, string $remoteVerificationId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_token');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);
@@ -141,7 +141,7 @@ class RemoteTokenController extends Controller
 
     public function revoke(string $electionId, string $tokenId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_remote_token');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);

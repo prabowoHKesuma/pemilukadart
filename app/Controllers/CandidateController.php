@@ -36,7 +36,7 @@ class CandidateController extends Controller
 
     public function create(string $electionId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_candidates');
 
         $election = Election::find((int) $electionId);
 
@@ -58,7 +58,7 @@ class CandidateController extends Controller
 
     public function store(string $electionId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_candidates');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);
@@ -117,7 +117,7 @@ class CandidateController extends Controller
 
     public function edit(string $electionId, string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_candidates');
 
         $election = Election::find((int) $electionId);
 
@@ -147,7 +147,7 @@ class CandidateController extends Controller
 
     public function update(string $electionId, string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_candidates');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);
@@ -219,7 +219,7 @@ class CandidateController extends Controller
 
     public function destroy(string $electionId, string $id): void
     {
-        Auth::requireRole(['superadmin']);
+        Auth::requirePermission('manage_candidates');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);

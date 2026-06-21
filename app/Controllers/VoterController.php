@@ -29,7 +29,7 @@ class VoterController extends Controller
 
     public function create(): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_voters');
 
         $this->view('voters/create', [
             'title' => 'Tambah Pemilih',
@@ -40,7 +40,7 @@ class VoterController extends Controller
 
     public function store(): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_voters');
         Csrf::verify();
 
         $voterCode = strtoupper(trim($_POST['voter_code'] ?? ''));
@@ -135,7 +135,7 @@ class VoterController extends Controller
 
     public function edit(string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_voters');
 
         $voter = Voter::find((int) $id);
 
@@ -154,7 +154,7 @@ class VoterController extends Controller
 
     public function update(string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_voters');
         Csrf::verify();
 
         $voter = Voter::find((int) $id);
@@ -267,7 +267,7 @@ class VoterController extends Controller
 
     public function destroy(string $id): void
     {
-        Auth::requireRole(['superadmin']);
+        Auth::requirePermission('manage_voters');
         Csrf::verify();
 
         $voter = Voter::find((int) $id);

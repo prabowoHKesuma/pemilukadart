@@ -40,7 +40,7 @@ class ElectionVoterController extends Controller
 
     public function create(string $electionId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('assign_voters');
 
         $election = Election::find((int) $electionId);
 
@@ -65,7 +65,7 @@ class ElectionVoterController extends Controller
 
     public function store(string $electionId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('assign_voters');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);
@@ -136,7 +136,7 @@ class ElectionVoterController extends Controller
 
     public function updateChannel(string $electionId, string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('assign_voters');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);
@@ -183,7 +183,7 @@ class ElectionVoterController extends Controller
 
     public function destroy(string $electionId, string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('assign_voters');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);

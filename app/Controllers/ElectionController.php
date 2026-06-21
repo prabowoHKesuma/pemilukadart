@@ -28,7 +28,7 @@ class ElectionController extends Controller
 
     public function create(): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_elections');
 
         $this->view('elections/create', [
             'title' => 'Tambah Pemilihan',
@@ -39,7 +39,7 @@ class ElectionController extends Controller
 
     public function store(): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_elections');
         Csrf::verify();
 
         $title = trim($_POST['title'] ?? '');
@@ -110,7 +110,7 @@ class ElectionController extends Controller
 
     public function edit(string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_elections');
 
         $election = Election::find((int) $id);
 
@@ -129,7 +129,7 @@ class ElectionController extends Controller
 
     public function update(string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_elections');
         Csrf::verify();
 
         $election = Election::find((int) $id);
@@ -206,7 +206,7 @@ class ElectionController extends Controller
 
     public function destroy(string $id): void
     {
-        Auth::requireRole(['superadmin']);
+        Auth::requirePermission('manage_elections');
         Csrf::verify();
 
         $election = Election::find((int) $id);
@@ -234,7 +234,7 @@ class ElectionController extends Controller
 
     public function changeStatus(string $id): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('manage_elections');
         Csrf::verify();
 
         $election = Election::find((int) $id);

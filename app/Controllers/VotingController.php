@@ -21,7 +21,7 @@ class VotingController extends Controller
 {
     public function index(): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('tps_validate');
 
         $elections = Election::openElections();
 
@@ -33,7 +33,7 @@ class VotingController extends Controller
 
     public function searchVoter(string $electionId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('tps_validate');
 
         $election = Election::find((int) $electionId);
 
@@ -67,7 +67,7 @@ class VotingController extends Controller
 
     public function ballot(string $electionId, string $electionVoterId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('tps_validate');
 
         $election = Election::find((int) $electionId);
 
@@ -120,7 +120,7 @@ class VotingController extends Controller
 
     public function submit(string $electionId, string $electionVoterId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('tps_validate');
         Csrf::verify();
 
         $candidateId = (int) ($_POST['candidate_id'] ?? 0);
@@ -213,7 +213,7 @@ class VotingController extends Controller
 
     public function success(string $electionId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('tps_validate');
 
         $election = Election::find((int) $electionId);
 
@@ -230,7 +230,7 @@ class VotingController extends Controller
 
     public function generateBoothCode(string $electionId, string $electionVoterId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('tps_validate');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);
@@ -314,7 +314,7 @@ class VotingController extends Controller
 
     public function revokeBoothCode(string $electionId, string $tokenId): void
     {
-        Auth::requireRole(['superadmin', 'panitia']);
+        Auth::requirePermission('tps_validate');
         Csrf::verify();
 
         $election = Election::find((int) $electionId);
