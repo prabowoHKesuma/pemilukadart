@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 18, 2026 at 09:14 AM
+-- Generation Time: Jun 22, 2026 at 01:43 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -30,6 +30,9 @@ SET time_zone = "+00:00";
 CREATE TABLE `audit_logs` (
   `id` bigint(20) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
+  `organization_id` int(11) DEFAULT NULL,
+  `region_id` int(11) DEFAULT NULL,
+  `election_id` int(11) DEFAULT NULL,
   `action` varchar(100) NOT NULL,
   `description` text DEFAULT NULL,
   `ip_address` varchar(50) DEFAULT NULL,
@@ -79,6 +82,8 @@ CREATE TABLE `candidates` (
 
 CREATE TABLE `elections` (
   `id` int(11) NOT NULL,
+  `organization_id` int(11) DEFAULT NULL,
+  `region_id` int(11) DEFAULT NULL,
   `title` varchar(150) NOT NULL,
   `description` text DEFAULT NULL,
   `status` enum('draft','open','closed','finished') NOT NULL DEFAULT 'draft',
@@ -104,6 +109,76 @@ CREATE TABLE `election_voters` (
   `voted_at` datetime DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `menus`
+--
+
+CREATE TABLE `menus` (
+  `id` int(11) NOT NULL,
+  `parent_id` int(11) DEFAULT NULL,
+  `menu_key` varchar(100) NOT NULL,
+  `title` varchar(150) NOT NULL,
+  `url` varchar(255) DEFAULT NULL,
+  `icon_class` varchar(100) DEFAULT NULL,
+  `permission_name` varchar(100) DEFAULT NULL,
+  `target` varchar(20) NOT NULL DEFAULT '_self',
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `menus`
+--
+
+INSERT INTO `menus` (`id`, `parent_id`, `menu_key`, `title`, `url`, `icon_class`, `permission_name`, `target`, `sort_order`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, NULL, 'dashboard', 'Dashboard', '/', NULL, NULL, '_self', 10, 1, '2026-06-21 21:08:59', NULL),
+(2, NULL, 'group_panitia', 'Panitia', NULL, NULL, NULL, '_self', 20, 1, '2026-06-21 21:08:59', NULL),
+(3, NULL, 'group_auditor', 'Auditor', NULL, NULL, NULL, '_self', 30, 1, '2026-06-21 21:08:59', NULL),
+(4, NULL, 'group_saksi', 'Saksi', NULL, NULL, NULL, '_self', 40, 1, '2026-06-21 21:08:59', NULL),
+(5, NULL, 'group_admin', 'Administrasi Sistem', NULL, NULL, NULL, '_self', 90, 1, '2026-06-21 21:08:59', NULL),
+(6, 2, 'panitia_pemilihan', 'Pemilihan', '/elections', NULL, 'manage_elections', '_self', 10, 1, '2026-06-21 21:09:00', NULL),
+(7, 2, 'panitia_pemilih', 'Pemilih', '/voters', NULL, 'manage_voters', '_self', 20, 1, '2026-06-21 21:09:00', NULL),
+(8, 2, 'panitia_kandidat', 'Kandidat', '/elections', NULL, 'manage_candidates', '_self', 30, 1, '2026-06-21 21:09:00', '2026-06-22 06:02:24'),
+(9, 2, 'panitia_validasi_tps', 'Validasi TPS', '/tps-voting', NULL, 'tps_validate', '_self', 40, 1, '2026-06-21 21:09:00', NULL),
+(10, 2, 'panitia_bilik_tps', 'Bilik TPS', '/tps-booth', NULL, 'tps_booth_access', '_blank', 50, 1, '2026-06-21 21:09:00', NULL),
+(11, 2, 'panitia_remote_verification', 'Verifikasi Remote', '/remote-verifications', NULL, 'manage_remote_verification', '_self', 60, 1, '2026-06-21 21:09:00', NULL),
+(12, 2, 'panitia_remote_token', 'Token Remote', '/remote-tokens', NULL, 'manage_remote_token', '_self', 70, 1, '2026-06-21 21:09:00', NULL),
+(13, 2, 'panitia_hasil', 'Hasil', '/results', NULL, 'view_results', '_self', 80, 1, '2026-06-21 21:09:00', NULL),
+(14, 3, 'auditor_audit_log', 'Audit Log', '/audit-logs', NULL, 'view_audit_logs', '_self', 10, 1, '2026-06-21 21:09:00', NULL),
+(15, 3, 'auditor_hasil', 'Hasil', '/results', NULL, 'view_results', '_self', 20, 1, '2026-06-21 21:09:00', NULL),
+(16, 4, 'saksi_hasil', 'Hasil', '/results', NULL, 'view_results', '_self', 10, 1, '2026-06-21 21:09:00', NULL),
+(17, 5, 'admin_users', 'User Management', '/users', NULL, 'manage_users', '_self', 10, 1, '2026-06-21 21:09:00', NULL),
+(18, 5, 'admin_roles', 'Role Management', '/roles', NULL, 'manage_roles', '_self', 20, 1, '2026-06-21 21:09:00', NULL),
+(19, 5, 'admin_regions', 'Region Management', '/regions', NULL, 'manage_regions', '_self', 30, 1, '2026-06-21 21:09:00', NULL),
+(20, 5, 'admin_menus', 'Menu Management', '/menus', NULL, 'manage_menus', '_self', 40, 1, '2026-06-22 05:44:39', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `organizations`
+--
+
+CREATE TABLE `organizations` (
+  `id` int(11) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `type` enum('rt','rw','kelurahan','kecamatan','kota','custom') NOT NULL DEFAULT 'custom',
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `organizations`
+--
+
+INSERT INTO `organizations` (`id`, `name`, `type`, `description`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Default Organization', 'custom', 'Default organization untuk data awal sistem.', 1, '2026-06-21 12:56:50', NULL);
 
 -- --------------------------------------------------------
 
@@ -139,7 +214,27 @@ INSERT INTO `permissions` (`id`, `name`, `label`, `group_name`, `description`, `
 (12, 'view_results', 'Lihat Hasil', 'Hasil', 'Melihat hasil pemilihan.', '2026-06-18 09:45:45'),
 (13, 'print_results', 'Cetak Berita Acara', 'Hasil', 'Cetak dan export hasil pemilihan.', '2026-06-18 09:45:45'),
 (14, 'view_audit_logs', 'Lihat Audit Log', 'Audit', 'Melihat audit log sistem.', '2026-06-18 09:45:45'),
-(15, 'manage_system_settings', 'Kelola Setting Sistem', 'System', 'Mengelola konfigurasi sistem.', '2026-06-18 09:45:45');
+(15, 'manage_system_settings', 'Kelola Setting Sistem', 'System', 'Mengelola konfigurasi sistem.', '2026-06-18 09:45:45'),
+(16, 'manage_regions', 'Kelola Wilayah', 'Wilayah', 'Mengelola struktur organisasi dan wilayah.', '2026-06-21 12:56:50'),
+(17, 'manage_organizations', 'Kelola Organization', 'Wilayah', 'Mengelola organization / tenant sistem.', '2026-06-21 12:56:50'),
+(18, 'manage_menus', 'Kelola Menu', 'System', 'Mengelola menu sidebar dan role menu.', '2026-06-22 05:44:39');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `regions`
+--
+
+CREATE TABLE `regions` (
+  `id` int(11) NOT NULL,
+  `organization_id` int(11) NOT NULL,
+  `parent_id` int(11) DEFAULT NULL,
+  `level` enum('kota','kecamatan','kelurahan','rw','rt','custom') NOT NULL DEFAULT 'custom',
+  `code` varchar(50) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -196,6 +291,55 @@ INSERT INTO `roles` (`id`, `name`, `label`, `description`, `is_system`, `created
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `role_menus`
+--
+
+CREATE TABLE `role_menus` (
+  `id` int(11) NOT NULL,
+  `role_id` int(11) NOT NULL,
+  `menu_id` int(11) NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `role_menus`
+--
+
+INSERT INTO `role_menus` (`id`, `role_id`, `menu_id`, `created_at`) VALUES
+(2, 4, 1, '2026-06-21 21:09:00'),
+(3, 2, 1, '2026-06-21 21:09:00'),
+(4, 3, 1, '2026-06-21 21:09:00'),
+(5, 1, 1, '2026-06-21 21:09:00'),
+(6, 5, 1, '2026-06-21 21:09:00'),
+(8, 2, 10, '2026-06-21 21:09:00'),
+(9, 2, 13, '2026-06-21 21:09:00'),
+(11, 2, 7, '2026-06-21 21:09:00'),
+(12, 2, 6, '2026-06-21 21:09:00'),
+(13, 2, 12, '2026-06-21 21:09:00'),
+(14, 2, 11, '2026-06-21 21:09:00'),
+(15, 2, 9, '2026-06-21 21:09:00'),
+(23, 3, 16, '2026-06-21 21:09:00'),
+(24, 4, 14, '2026-06-21 21:09:00'),
+(25, 4, 15, '2026-06-21 21:09:00'),
+(27, 5, 16, '2026-06-21 21:09:00'),
+(28, 1, 19, '2026-06-21 21:09:00'),
+(29, 1, 18, '2026-06-21 21:09:00'),
+(30, 1, 17, '2026-06-21 21:09:00'),
+(31, 1, 14, '2026-06-21 21:09:00'),
+(32, 1, 10, '2026-06-21 21:09:00'),
+(33, 1, 13, '2026-06-21 21:09:00'),
+(35, 1, 7, '2026-06-21 21:09:00'),
+(36, 1, 6, '2026-06-21 21:09:00'),
+(37, 1, 12, '2026-06-21 21:09:00'),
+(38, 1, 11, '2026-06-21 21:09:00'),
+(39, 1, 9, '2026-06-21 21:09:00'),
+(43, 1, 20, '2026-06-22 05:44:39'),
+(46, 2, 8, '2026-06-22 06:02:24'),
+(47, 1, 8, '2026-06-22 06:02:24');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `role_permissions`
 --
 
@@ -241,7 +385,10 @@ INSERT INTO `role_permissions` (`id`, `role_id`, `permission_id`, `created_at`) 
 (34, 4, 13, '2026-06-18 09:45:45'),
 (35, 4, 14, '2026-06-18 09:45:45'),
 (36, 4, 12, '2026-06-18 09:45:45'),
-(37, 5, 12, '2026-06-18 09:45:45');
+(37, 5, 12, '2026-06-18 09:45:45'),
+(43, 1, 17, '2026-06-21 12:56:50'),
+(44, 1, 16, '2026-06-21 12:56:50'),
+(56, 1, 18, '2026-06-22 05:44:39');
 
 -- --------------------------------------------------------
 
@@ -274,6 +421,8 @@ CREATE TABLE `users` (
   `password` varchar(255) NOT NULL,
   `role` varchar(100) NOT NULL DEFAULT 'viewer',
   `role_id` int(11) DEFAULT NULL,
+  `organization_id` int(11) DEFAULT NULL,
+  `region_id` int(11) DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT 1,
   `last_login_at` datetime DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
@@ -284,10 +433,12 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `username`, `password`, `role`, `role_id`, `is_active`, `last_login_at`, `created_at`, `updated_at`) VALUES
-(1, 'Administrator', 'admin', '$2y$10$cnqm8wwPK0qxRzTdEOzM8uevHGOtmLF55iiGu3v7Ez9HHPAosLcq6', 'superadmin', 1, 1, '2026-06-18 14:01:06', '2026-06-17 06:45:51', NULL),
-(2, 'Panitia 2', 'panitia2', '$2y$10$kP6RWydXzlFyG1lPg5/1Ku2xpoBlxBPNL3QIno2/LKzUuEgCirwre', 'panitia', 2, 1, '2026-06-17 14:35:03', '2026-06-17 10:42:18', NULL),
-(3, 'Operator 01', 'operator01', '$2y$10$3DMyYQStg6Yl6Hz4YAfBfeMEEpTbBqeOXEQ97xiF0VZZ06mb1xd16', 'panitia', 2, 0, '2026-06-18 14:00:03', '2026-06-18 13:59:51', NULL);
+INSERT INTO `users` (`id`, `name`, `username`, `password`, `role`, `role_id`, `organization_id`, `region_id`, `is_active`, `last_login_at`, `created_at`, `updated_at`) VALUES
+(1, 'Administrator', 'admin', '$2y$10$cnqm8wwPK0qxRzTdEOzM8uevHGOtmLF55iiGu3v7Ez9HHPAosLcq6', 'superadmin', 1, 1, NULL, 1, '2026-06-22 06:40:58', '2026-06-17 06:45:51', NULL),
+(5, 'panitia test', 'panitia1', '$2y$10$j8zf966eudiQWQjyiF85puvtI1Ixh0cr0jaQWVCpMWfrKOlZLF.E2', 'panitia', 2, NULL, NULL, 1, '2026-06-22 05:11:17', '2026-06-21 21:36:59', NULL),
+(6, 'auditor test', 'auditor1', '$2y$10$zw.DwTh1xgqI33poUGSBpOYV2j8rSQQAuIgdFmI4wFh/QDeQzrDmy', 'auditor', 4, 1, NULL, 1, '2026-06-22 05:11:38', '2026-06-21 21:37:34', NULL),
+(7, 'saksi test', 'saksi001', '$2y$10$1aKpqUGu9RYwfZbOQfzt5eaBjjcJRYNPNkeHrVrgu0vZHDjKhX6u6', 'saksi', 3, 1, NULL, 1, '2026-06-21 21:39:18', '2026-06-21 21:38:33', NULL),
+(8, 'viewer test', 'viewer01', '$2y$10$A/yhQboCkDJQHrSXAoQlmuEmX781u3zunTfSVE9Nb6ljku/Cb6BHW', 'viewer', 5, 1, NULL, 1, '2026-06-21 21:39:07', '2026-06-21 21:39:01', NULL);
 
 -- --------------------------------------------------------
 
@@ -298,6 +449,8 @@ INSERT INTO `users` (`id`, `name`, `username`, `password`, `role`, `role_id`, `i
 CREATE TABLE `voters` (
   `id` int(11) NOT NULL,
   `voter_code` varchar(50) NOT NULL,
+  `organization_id` int(11) DEFAULT NULL,
+  `region_id` int(11) DEFAULT NULL,
   `name` varchar(120) NOT NULL,
   `nik_hash` varchar(255) DEFAULT NULL,
   `kk_hash` varchar(255) DEFAULT NULL,
@@ -339,7 +492,10 @@ CREATE TABLE `voting_tokens` (
 ALTER TABLE `audit_logs`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_audit_user` (`user_id`),
-  ADD KEY `idx_audit_action` (`action`);
+  ADD KEY `idx_audit_action` (`action`),
+  ADD KEY `idx_audit_organization` (`organization_id`),
+  ADD KEY `idx_audit_region` (`region_id`),
+  ADD KEY `idx_audit_election` (`election_id`);
 
 --
 -- Indexes for table `ballots`
@@ -362,7 +518,9 @@ ALTER TABLE `candidates`
 --
 ALTER TABLE `elections`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `created_by` (`created_by`);
+  ADD KEY `created_by` (`created_by`),
+  ADD KEY `idx_elections_organization` (`organization_id`),
+  ADD KEY `idx_elections_region` (`region_id`);
 
 --
 -- Indexes for table `election_voters`
@@ -373,11 +531,37 @@ ALTER TABLE `election_voters`
   ADD KEY `voter_id` (`voter_id`);
 
 --
+-- Indexes for table `menus`
+--
+ALTER TABLE `menus`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `menu_key` (`menu_key`),
+  ADD KEY `idx_menus_parent` (`parent_id`),
+  ADD KEY `idx_menus_permission` (`permission_name`),
+  ADD KEY `idx_menus_active_order` (`is_active`,`sort_order`);
+
+--
+-- Indexes for table `organizations`
+--
+ALTER TABLE `organizations`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `permissions`
 --
 ALTER TABLE `permissions`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `name` (`name`);
+
+--
+-- Indexes for table `regions`
+--
+ALTER TABLE `regions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_org_region_code` (`organization_id`,`code`),
+  ADD KEY `idx_regions_organization` (`organization_id`),
+  ADD KEY `idx_regions_parent` (`parent_id`),
+  ADD KEY `idx_regions_level` (`level`);
 
 --
 -- Indexes for table `remote_verifications`
@@ -395,6 +579,14 @@ ALTER TABLE `remote_verifications`
 ALTER TABLE `roles`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `name` (`name`);
+
+--
+-- Indexes for table `role_menus`
+--
+ALTER TABLE `role_menus`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_role_menu` (`role_id`,`menu_id`),
+  ADD KEY `menu_id` (`menu_id`);
 
 --
 -- Indexes for table `role_permissions`
@@ -422,14 +614,18 @@ ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`),
   ADD UNIQUE KEY `unique_users_username` (`username`),
-  ADD KEY `idx_users_role_id` (`role_id`);
+  ADD KEY `idx_users_role_id` (`role_id`),
+  ADD KEY `idx_users_organization` (`organization_id`),
+  ADD KEY `idx_users_region` (`region_id`);
 
 --
 -- Indexes for table `voters`
 --
 ALTER TABLE `voters`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `voter_code` (`voter_code`);
+  ADD UNIQUE KEY `voter_code` (`voter_code`),
+  ADD KEY `idx_voters_organization` (`organization_id`),
+  ADD KEY `idx_voters_region` (`region_id`);
 
 --
 -- Indexes for table `voting_tokens`
@@ -478,10 +674,28 @@ ALTER TABLE `election_voters`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `menus`
+--
+ALTER TABLE `menus`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+
+--
+-- AUTO_INCREMENT for table `organizations`
+--
+ALTER TABLE `organizations`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `permissions`
 --
 ALTER TABLE `permissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+
+--
+-- AUTO_INCREMENT for table `regions`
+--
+ALTER TABLE `regions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `remote_verifications`
@@ -493,13 +707,19 @@ ALTER TABLE `remote_verifications`
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `role_menus`
+--
+ALTER TABLE `role_menus`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT for table `role_permissions`
 --
 ALTER TABLE `role_permissions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `tps_booth_tokens`
@@ -511,7 +731,7 @@ ALTER TABLE `tps_booth_tokens`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `voters`
@@ -533,7 +753,10 @@ ALTER TABLE `voting_tokens`
 -- Constraints for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  ADD CONSTRAINT `audit_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `audit_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_audit_election` FOREIGN KEY (`election_id`) REFERENCES `elections` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_audit_organization` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_audit_region` FOREIGN KEY (`region_id`) REFERENCES `regions` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `ballots`
@@ -552,7 +775,9 @@ ALTER TABLE `candidates`
 -- Constraints for table `elections`
 --
 ALTER TABLE `elections`
-  ADD CONSTRAINT `elections_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `elections_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_elections_organization` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_elections_region` FOREIGN KEY (`region_id`) REFERENCES `regions` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `election_voters`
@@ -562,6 +787,19 @@ ALTER TABLE `election_voters`
   ADD CONSTRAINT `election_voters_ibfk_2` FOREIGN KEY (`voter_id`) REFERENCES `voters` (`id`) ON DELETE CASCADE;
 
 --
+-- Constraints for table `menus`
+--
+ALTER TABLE `menus`
+  ADD CONSTRAINT `menus_ibfk_1` FOREIGN KEY (`parent_id`) REFERENCES `menus` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `regions`
+--
+ALTER TABLE `regions`
+  ADD CONSTRAINT `regions_ibfk_1` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `regions_ibfk_2` FOREIGN KEY (`parent_id`) REFERENCES `regions` (`id`) ON DELETE SET NULL;
+
+--
 -- Constraints for table `remote_verifications`
 --
 ALTER TABLE `remote_verifications`
@@ -569,6 +807,13 @@ ALTER TABLE `remote_verifications`
   ADD CONSTRAINT `remote_verifications_ibfk_2` FOREIGN KEY (`voter_id`) REFERENCES `voters` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `remote_verifications_ibfk_3` FOREIGN KEY (`verified_by_1`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `remote_verifications_ibfk_4` FOREIGN KEY (`verified_by_2`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `role_menus`
+--
+ALTER TABLE `role_menus`
+  ADD CONSTRAINT `role_menus_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `role_menus_ibfk_2` FOREIGN KEY (`menu_id`) REFERENCES `menus` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `role_permissions`
@@ -589,7 +834,16 @@ ALTER TABLE `tps_booth_tokens`
 -- Constraints for table `users`
 --
 ALTER TABLE `users`
+  ADD CONSTRAINT `fk_users_organization` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_users_region` FOREIGN KEY (`region_id`) REFERENCES `regions` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_users_role_id` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `voters`
+--
+ALTER TABLE `voters`
+  ADD CONSTRAINT `fk_voters_organization` FOREIGN KEY (`organization_id`) REFERENCES `organizations` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_voters_region` FOREIGN KEY (`region_id`) REFERENCES `regions` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `voting_tokens`
