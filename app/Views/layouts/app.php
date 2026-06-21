@@ -148,6 +148,7 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
     <style>
         :root {
             --sidebar-width: 280px;
+            --desktop-navbar-height: 56px;
             --border-color: #dee2e6;
             --page-bg: #f5f6f8;
             --sidebar-bg: #ffffff;
@@ -165,6 +166,20 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
             margin: 0;
             background: var(--page-bg);
             color: var(--text-main);
+        }
+
+        .desktop-navbar {
+            min-height: var(--desktop-navbar-height);
+            display: none;
+        }
+
+        .desktop-navbar .navbar-brand {
+            font-weight: 700;
+        }
+
+        .desktop-user-info {
+            color: #ffffff;
+            font-size: 0.875rem;
         }
 
         .app-shell {
@@ -187,45 +202,6 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
             flex: 1;
             min-width: 0;
             padding: 1.5rem;
-        }
-
-        .sidebar-brand {
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .sidebar-brand-title {
-            font-weight: 700;
-            font-size: 1.1rem;
-            line-height: 1.2;
-        }
-
-        .sidebar-brand-subtitle {
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-        }
-
-        .sidebar-user {
-            padding: 0.9rem 1rem;
-            border-bottom: 1px solid var(--border-color);
-            background: #f8f9fa;
-        }
-
-        .sidebar-user-name {
-            font-weight: 600;
-            line-height: 1.2;
-        }
-
-        .sidebar-user-role {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            margin-top: 0.25rem;
-        }
-
-        .sidebar-logout {
-            padding: 0.75rem 1rem;
-            border-bottom: 1px solid var(--border-color);
         }
 
         .mobile-topbar {
@@ -284,6 +260,21 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
             margin-bottom: 1rem;
         }
 
+        @media (min-width: 992px) {
+            .desktop-navbar {
+                display: flex;
+            }
+
+            .app-shell {
+                min-height: calc(100vh - var(--desktop-navbar-height));
+            }
+
+            .app-sidebar {
+                min-height: calc(100vh - var(--desktop-navbar-height));
+                top: 0;
+            }
+        }
+
         @media (max-width: 991.98px) {
             .app-shell {
                 display: block;
@@ -327,6 +318,32 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
     </style>
 </head>
 <body>
+
+<nav class="navbar navbar-dark bg-dark desktop-navbar">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="<?= htmlspecialchars($appUrl) ?>/">
+            <?= htmlspecialchars($appName) ?>
+        </a>
+
+        <div class="d-flex align-items-center gap-3">
+            <div class="desktop-user-info">
+                <?= htmlspecialchars($user['name'] ?? '-') ?>
+                <?php if (!empty($user['role_label'] ?? $user['role'] ?? null)): ?>
+                    <span class="text-white-50">
+                        (<?= htmlspecialchars($user['role_label'] ?? $user['role']) ?>)
+                    </span>
+                <?php endif; ?>
+            </div>
+
+            <form method="post" action="<?= htmlspecialchars($appUrl) ?>/logout" class="mb-0">
+                <?= Csrf::field() ?>
+                <button type="submit" class="btn btn-sm btn-outline-light">
+                    Logout
+                </button>
+            </form>
+        </div>
+    </div>
+</nav>
 
 <div class="mobile-topbar">
     <button
@@ -389,46 +406,10 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
             <?php endif; ?>
         </div>
     </div>
-
-    <div class="offcanvas-logout">
-        <form method="post" action="<?= htmlspecialchars($appUrl) ?>/logout" class="mb-0">
-            <?= Csrf::field() ?>
-            <button type="submit" class="btn btn-outline-danger w-100">
-                Logout
-            </button>
-        </form>
-    </div>
 </div>
 
 <div class="app-shell">
     <aside class="app-sidebar app-sidebar-desktop">
-        <div class="sidebar-brand">
-            <div class="sidebar-brand-title">
-                <?= htmlspecialchars($appName) ?>
-            </div>
-            <div class="sidebar-brand-subtitle">
-                E-Voting System
-            </div>
-        </div>
-
-        <div class="sidebar-user">
-            <div class="sidebar-user-name">
-                <?= htmlspecialchars($user['name'] ?? '-') ?>
-            </div>
-            <div class="sidebar-user-role">
-                <?= htmlspecialchars($user['role_label'] ?? $user['role'] ?? '-') ?>
-            </div>
-        </div>
-
-        <div class="sidebar-logout">
-            <form method="post" action="<?= htmlspecialchars($appUrl) ?>/logout" class="mb-0">
-                <?= Csrf::field() ?>
-                <button type="submit" class="btn btn-sm btn-outline-danger w-100">
-                    Logout
-                </button>
-            </form>
-        </div>
-
         <div class="list-group list-group-flush">
             <?php if (empty($menuTree)): ?>
                 <div class="list-group-item text-muted">
