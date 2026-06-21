@@ -15,6 +15,7 @@ use App\Controllers\TpsBoothController;
 use App\Controllers\RoleController;
 use App\Controllers\UserController;
 use App\Controllers\RegionController;
+use App\Controllers\MenuController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -110,3 +111,10 @@ $router->post('/regions/store', [RegionController::class, 'store']);
 $router->get('/regions/{id}/edit', [RegionController::class, 'edit']);
 $router->post('/regions/{id}/update', [RegionController::class, 'update']);
 $router->post('/regions/{id}/delete', [RegionController::class, 'destroy']);
+
+$router->get('/menus', [MenuController::class, 'index']);
+$router->get('/menus/create', [MenuController::class, 'create']);
+$router->post('/menus/store', [MenuController::class, 'store']);
+$router->get('/menus/{id}/edit', [MenuController::class, 'edit']);
+$router->post('/menus/{id}/update', [MenuController::class, 'update']);
+$router->post('/menus/{id}/delete', [MenuController::class, 'destroy']);
