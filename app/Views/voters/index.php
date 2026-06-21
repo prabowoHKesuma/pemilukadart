@@ -38,6 +38,7 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
                         <th>Kode</th>
                         <th>Nama</th>
                         <th>Alamat</th>
+                        <th>Wilayah</th>
                         <th>RT/RW</th>
                         <th>No HP</th>
                         <th>NIK</th>
@@ -61,6 +62,21 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
 
                             <td>
                                 <?= !empty($voter['address']) ? nl2br(htmlspecialchars($voter['address'])) : '-' ?>
+                            </td>
+
+                            <td>
+                                <?php if (!empty($voter['region_name'])): ?>
+                                    <code><?= htmlspecialchars($voter['region_code']) ?></code>
+                                    -
+                                    <?= htmlspecialchars($voter['region_name']) ?>
+                                    <div class="small text-muted">
+                                        <?= htmlspecialchars($voter['organization_name'] ?? '-') ?>
+                                        /
+                                        <?= htmlspecialchars(strtoupper($voter['region_level'])) ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span class="text-muted">Belum diset</span>
+                                <?php endif; ?>
                             </td>
 
                             <td>

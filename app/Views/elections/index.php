@@ -34,6 +34,7 @@ use App\Core\Env;
                     <tr>
                         <th style="width: 50px;">No</th>
                         <th>Nama Pemilihan</th>
+                        <th>Wilayah</th>
                         <th>Status</th>
                         <th>Mulai</th>
                         <th>Selesai</th>
@@ -54,6 +55,22 @@ use App\Core\Env;
                                     </div>
                                 <?php endif; ?>
                             </td>
+
+                            <td>
+                                <?php if (!empty($election['region_name'])): ?>
+                                    <code><?= htmlspecialchars($election['region_code']) ?></code>
+                                    -
+                                    <?= htmlspecialchars($election['region_name']) ?>
+                                    <div class="small text-muted">
+                                        <?= htmlspecialchars($election['organization_name'] ?? '-') ?>
+                                        /
+                                        <?= htmlspecialchars(strtoupper($election['region_level'])) ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span class="text-muted">Belum diset</span>
+                                <?php endif; ?>
+                            </td>
+                            
                             <td>
                                 <?php
                                     $badgeClass = match ($election['status']) {

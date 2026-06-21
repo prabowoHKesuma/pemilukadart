@@ -9,14 +9,19 @@ use Throwable;
 
 class AuditLog
 {
-    public static function record(string $action, ?string $description = null, ?int $userId = null): void
+    public static function record(string $action, ?string $description = null, ?int $userId = null, array $context = []): void
     {
         try {
             $pdo = Database::connection();
 
+            $authUser = Auth::user();
+
             $stmt = $pdo->prepare("
                 INSERT INTO audit_logs (
                     user_id,
+                    organization_id,
+                    region_id,
+                    election_id,
                     action,
                     description,
                     ip_address,
@@ -24,6 +29,9 @@ class AuditLog
                     created_at
                 ) VALUES (
                     :user_id,
+                    :organization_id,
+                    :region_id,
+                    :election_id,
                     :action,
                     :description,
                     :ip_address,
@@ -34,6 +42,9 @@ class AuditLog
 
             $stmt->execute([
                 'user_id' => $userId ?? Auth::id(),
+                'organization_id' => $context['organization_id'] ?? ($authUser['organization_id'] ?? null),
+                'region_id' => $context['region_id'] ?? ($authUser['region_id'] ?? null),
+                'election_id' => $context['election_id'] ?? null,
                 'action' => $action,
                 'description' => $description,
                 'ip_address' => self::ipAddress(),
@@ -41,7 +52,6 @@ class AuditLog
             ]);
         } catch (Throwable $e) {
             // Audit log tidak boleh membuat proses utama gagal.
-            // Kalau insert log gagal, sistem tetap jalan.
         }
     }
 

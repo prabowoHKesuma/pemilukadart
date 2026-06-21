@@ -10,6 +10,8 @@ use App\Core\Session;
 use App\Models\AuditLog;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Organization;
+use App\Models\Region;
 
 class UserController extends Controller
 {
@@ -30,10 +32,14 @@ class UserController extends Controller
         Auth::requirePermission('manage_users');
 
         $roles = Role::options();
+        $organizations = Organization::options();
+        $regions = Region::options();
 
         $this->view('users/create', [
             'title' => 'Tambah User',
             'roles' => $roles,
+            'organizations' => $organizations,
+            'regions' => $regions,
         ]);
     }
 
@@ -47,6 +53,8 @@ class UserController extends Controller
         $password = $_POST['password'] ?? '';
         $passwordConfirmation = $_POST['password_confirmation'] ?? '';
         $roleId = (int) ($_POST['role_id'] ?? 0);
+        $organizationId = !empty($_POST['organization_id']) ? (int) $_POST['organization_id'] : null;
+        $regionId = !empty($_POST['region_id']) ? (int) $_POST['region_id'] : null;
         $isActive = isset($_POST['is_active']) ? 1 : 0;
 
         if ($name === '') {
@@ -86,12 +94,37 @@ class UserController extends Controller
             Redirect::to('/users/create');
         }
 
+        if ($regionId) {
+            $region = Region::find($regionId);
+
+            if (!$region) {
+                Session::flash('error', 'Wilayah tidak valid.');
+                Redirect::to('/users/create');
+            }
+
+            if ($organizationId && (int) $region['organization_id'] !== (int) $organizationId) {
+                Session::flash('error', 'Wilayah tidak sesuai dengan organization.');
+                Redirect::to('/users/create');
+            }
+
+            if (!$organizationId) {
+                $organizationId = (int) $region['organization_id'];
+            }
+        }
+
+        if ($organizationId && !Organization::find($organizationId)) {
+            Session::flash('error', 'Organization tidak valid.');
+            Redirect::to('/users/create');
+        }
+
         User::create([
             'name' => $name,
             'username' => $username,
             'password' => password_hash($password, PASSWORD_DEFAULT),
             'role' => $role['name'],
             'role_id' => $roleId,
+            'organization_id' => $organizationId,
+            'region_id' => $regionId,
             'is_active' => $isActive,
         ]);
 
@@ -116,11 +149,15 @@ class UserController extends Controller
         }
 
         $roles = Role::options();
+        $organizations = Organization::options();
+        $regions = Region::options();
 
         $this->view('users/edit', [
             'title' => 'Edit User',
             'userData' => $user,
             'roles' => $roles,
+            'organizations' => $organizations,
+            'regions' => $regions,
         ]);
     }
 
@@ -139,6 +176,8 @@ class UserController extends Controller
         $name = trim($_POST['name'] ?? '');
         $username = strtolower(trim($_POST['username'] ?? ''));
         $roleId = (int) ($_POST['role_id'] ?? 0);
+        $organizationId = !empty($_POST['organization_id']) ? (int) $_POST['organization_id'] : null;
+        $regionId = !empty($_POST['region_id']) ? (int) $_POST['region_id'] : null;
         $isActive = isset($_POST['is_active']) ? 1 : 0;
 
         if ($name === '') {
@@ -171,6 +210,10 @@ class UserController extends Controller
                 Session::flash('error', 'Tidak boleh mengubah role akun yang sedang dipakai.');
                 Redirect::to('/users/' . $id . '/edit');
             }
+
+            $organizationId = $user['organization_id'] ? (int) $user['organization_id'] : null;
+            $regionId = $user['region_id'] ? (int) $user['region_id'] : null;
+
         }
 
         $role = Role::find($roleId);
@@ -180,11 +223,36 @@ class UserController extends Controller
             Redirect::to('/users/' . $id . '/edit');
         }
 
+        if ($regionId) {
+            $region = Region::find($regionId);
+
+            if (!$region) {
+                Session::flash('error', 'Wilayah tidak valid.');
+                Redirect::to('/users/' . $id . '/edit');
+            }
+
+            if ($organizationId && (int) $region['organization_id'] !== (int) $organizationId) {
+                Session::flash('error', 'Wilayah tidak sesuai dengan organization.');
+                Redirect::to('/users/' . $id . '/edit');
+            }
+
+            if (!$organizationId) {
+                $organizationId = (int) $region['organization_id'];
+            }
+        }
+
+        if ($organizationId && !Organization::find($organizationId)) {
+            Session::flash('error', 'Organization tidak valid.');
+            Redirect::to('/users/' . $id . '/edit');
+        }
+
         User::update((int) $id, [
             'name' => $name,
             'username' => $username,
             'role' => $role['name'],
             'role_id' => $roleId,
+            'organization_id' => $organizationId,
+            'region_id' => $regionId,
             'is_active' => $isActive,
         ]);
 

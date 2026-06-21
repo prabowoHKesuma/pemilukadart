@@ -12,9 +12,16 @@ class Voter
         $pdo = Database::connection();
 
         $stmt = $pdo->query("
-            SELECT *
-            FROM voters
-            ORDER BY name ASC
+            SELECT
+                v.*,
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
+            FROM voters v
+            LEFT JOIN organizations o ON o.id = v.organization_id
+            LEFT JOIN regions rg ON rg.id = v.region_id
+            ORDER BY v.name ASC
         ");
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -25,9 +32,16 @@ class Voter
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare("
-            SELECT *
-            FROM voters
-            WHERE id = ?
+            SELECT
+                v.*,
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
+            FROM voters v
+            LEFT JOIN organizations o ON o.id = v.organization_id
+            LEFT JOIN regions rg ON rg.id = v.region_id
+            WHERE v.id = ?
             LIMIT 1
         ");
 
@@ -97,6 +111,8 @@ class Voter
         $stmt = $pdo->prepare("
             INSERT INTO voters (
                 voter_code,
+                organization_id,
+                region_id,
                 name,
                 nik_hash,
                 kk_hash,
@@ -108,6 +124,8 @@ class Voter
                 created_at
             ) VALUES (
                 :voter_code,
+                :organization_id,
+                :region_id,
                 :name,
                 :nik_hash,
                 :kk_hash,
@@ -122,6 +140,8 @@ class Voter
 
         return $stmt->execute([
             'voter_code' => $data['voter_code'],
+            'organization_id' => $data['organization_id'],
+            'region_id' => $data['region_id'],
             'name' => $data['name'],
             'nik_hash' => $data['nik_hash'],
             'kk_hash' => $data['kk_hash'],
@@ -141,6 +161,8 @@ class Voter
             UPDATE voters
             SET
                 voter_code = :voter_code,
+                organization_id = :organization_id,
+                region_id = :region_id,
                 name = :name,
                 nik_hash = :nik_hash,
                 kk_hash = :kk_hash,
@@ -156,6 +178,8 @@ class Voter
         return $stmt->execute([
             'id' => $id,
             'voter_code' => $data['voter_code'],
+            'organization_id' => $data['organization_id'],
+            'region_id' => $data['region_id'],
             'name' => $data['name'],
             'nik_hash' => $data['nik_hash'],
             'kk_hash' => $data['kk_hash'],

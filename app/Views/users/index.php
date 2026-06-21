@@ -40,6 +40,8 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
                         <th>Nama</th>
                         <th>Username</th>
                         <th>Role</th>
+                        <th>Organization</th>
+                        <th>Wilayah</th>
                         <th>Status</th>
                         <th>Last Login</th>
                         <th style="width: 170px;">Aksi</th>
@@ -68,6 +70,23 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
                                 <div class="small text-muted">
                                     <?= htmlspecialchars($item['role_name'] ?? $item['role'] ?? '-') ?>
                                 </div>
+                            </td>
+
+                            <td>
+                                <?= htmlspecialchars($item['organization_name'] ?? '-') ?>
+                            </td>
+
+                            <td>
+                                <?php if (!empty($item['region_name'])): ?>
+                                    <code><?= htmlspecialchars($item['region_code']) ?></code>
+                                    -
+                                    <?= htmlspecialchars($item['region_name']) ?>
+                                    <div class="small text-muted">
+                                        <?= htmlspecialchars(strtoupper($item['region_level'])) ?>
+                                    </div>
+                                <?php else: ?>
+                                    <span class="text-muted">-</span>
+                                <?php endif; ?>
                             </td>
 
                             <td>

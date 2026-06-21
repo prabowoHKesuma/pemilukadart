@@ -15,9 +15,15 @@ class User
             SELECT
                 u.*,
                 r.name AS role_name,
-                r.label AS role_label
+                r.label AS role_label,
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
             FROM users u
             LEFT JOIN roles r ON r.id = u.role_id
+            LEFT JOIN organizations o ON o.id = u.organization_id
+            LEFT JOIN regions rg ON rg.id = u.region_id
             WHERE u.username = ?
             LIMIT 1
         ");
@@ -69,9 +75,15 @@ class User
             SELECT
                 u.*,
                 r.name AS role_name,
-                r.label AS role_label
+                r.label AS role_label,
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
             FROM users u
             LEFT JOIN roles r ON r.id = u.role_id
+            LEFT JOIN organizations o ON o.id = u.organization_id
+            LEFT JOIN regions rg ON rg.id = u.region_id
             ORDER BY u.name ASC
         ");
 
@@ -86,9 +98,15 @@ class User
             SELECT
                 u.*,
                 r.name AS role_name,
-                r.label AS role_label
+                r.label AS role_label,
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
             FROM users u
             LEFT JOIN roles r ON r.id = u.role_id
+            LEFT JOIN organizations o ON o.id = u.organization_id
+            LEFT JOIN regions rg ON rg.id = u.region_id
             WHERE u.id = ?
             LIMIT 1
         ");
@@ -137,6 +155,8 @@ class User
                 password,
                 role,
                 role_id,
+                organization_id,
+                region_id,
                 is_active,
                 created_at
             ) VALUES (
@@ -145,6 +165,8 @@ class User
                 :password,
                 :role,
                 :role_id,
+                :organization_id,
+                :region_id,
                 :is_active,
                 NOW()
             )
@@ -156,6 +178,8 @@ class User
             'password' => $data['password'],
             'role' => $data['role'],
             'role_id' => $data['role_id'],
+            'organization_id' => $data['organization_id'],
+            'region_id' => $data['region_id'],
             'is_active' => $data['is_active'],
         ]);
     }
@@ -171,6 +195,8 @@ class User
                 username = :username,
                 role = :role,
                 role_id = :role_id,
+                organization_id = :organization_id,
+                region_id = :region_id,
                 is_active = :is_active
             WHERE id = :id
         ");
@@ -181,6 +207,8 @@ class User
             'username' => $data['username'],
             'role' => $data['role'],
             'role_id' => $data['role_id'],
+            'organization_id' => $data['organization_id'],
+            'region_id' => $data['region_id'],
             'is_active' => $data['is_active'],
         ]);
     }

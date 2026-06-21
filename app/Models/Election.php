@@ -14,9 +14,13 @@ class Election
         $stmt = $pdo->query("
             SELECT 
                 e.*,
-                u.name AS created_by_name
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
             FROM elections e
-            LEFT JOIN users u ON u.id = e.created_by
+            LEFT JOIN organizations o ON o.id = e.organization_id
+            LEFT JOIN regions rg ON rg.id = e.region_id
             ORDER BY e.created_at DESC
         ");
 
@@ -28,9 +32,16 @@ class Election
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare("
-            SELECT *
-            FROM elections
-            WHERE id = ?
+            SELECT
+                e.*,
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
+            FROM elections e
+            LEFT JOIN organizations o ON o.id = e.organization_id
+            LEFT JOIN regions rg ON rg.id = e.region_id
+            WHERE e.id = ?
             LIMIT 1
         ");
 
@@ -48,6 +59,8 @@ class Election
         $stmt = $pdo->prepare("
             INSERT INTO elections (
                 title,
+                organization_id,
+                region_id,
                 description,
                 status,
                 start_at,
@@ -56,6 +69,8 @@ class Election
                 created_at
             ) VALUES (
                 :title,
+                :organization_id,
+                :region_id,
                 :description,
                 :status,
                 :start_at,
@@ -67,6 +82,8 @@ class Election
 
         return $stmt->execute([
             'title' => $data['title'],
+            'organization_id' => $data['organization_id'] ?? null,
+            'region_id' => $data['region_id'] ?? null,
             'description' => $data['description'],
             'status' => $data['status'],
             'start_at' => $data['start_at'],
@@ -85,6 +102,8 @@ class Election
                 title = :title,
                 description = :description,
                 status = :status,
+                organization_id = :organization_id,
+                region_id = :region_id,
                 start_at = :start_at,
                 end_at = :end_at,
                 updated_at = NOW()
@@ -96,6 +115,8 @@ class Election
             'title' => $data['title'],
             'description' => $data['description'],
             'status' => $data['status'],
+            'organization_id' => $data['organization_id'] ?? null,
+            'region_id' => $data['region_id'] ?? null,
             'start_at' => $data['start_at'],
             'end_at' => $data['end_at'],
         ]);
