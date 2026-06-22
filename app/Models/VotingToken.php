@@ -114,45 +114,64 @@ class VotingToken
     }
 
     public static function approvedRemoteVerifications(int $electionId): array
-    {
-        $pdo = Database::connection();
+{
+    $pdo = Database::connection();
 
-        $stmt = $pdo->prepare("
-            SELECT
-                rv.*,
-                v.voter_code,
-                v.name AS voter_name,
-                v.phone,
-                v.rt,
-                v.rw,
-                ev.allowed_channel,
-                ev.has_voted,
+    $stmt = $pdo->prepare("
+        SELECT
+            rv.id,
+            rv.election_id,
+            rv.voter_id,
+            rv.verification_code,
+            rv.status,
 
-                vt.id AS token_id,
-                vt.expires_at AS token_expires_at,
-                vt.used_at AS token_used_at,
-                vt.revoked_at AS token_revoked_at,
-                vt.created_at AS token_created_at
+            v.voter_code,
+            v.name AS voter_name,
+            v.phone,
 
-            FROM remote_verifications rv
-            JOIN voters v ON v.id = rv.voter_id
-            JOIN election_voters ev 
-                ON ev.election_id = rv.election_id
-               AND ev.voter_id = rv.voter_id
+            ev.allowed_channel,
+            ev.has_voted,
+            ev.voted_at,
 
-            LEFT JOIN voting_tokens vt
-                ON vt.remote_verification_id = rv.id
+            vt.id AS token_id,
+            vt.expires_at AS token_expires_at,
+            vt.used_at AS token_used_at,
+            vt.revoked_at AS token_revoked_at
 
-            WHERE rv.election_id = ?
-              AND rv.status = 'approved'
+        FROM remote_verifications rv
 
-            ORDER BY rv.verified_at DESC, rv.created_at DESC
-        ");
+        JOIN voters v 
+            ON v.id = rv.voter_id
 
-        $stmt->execute([$electionId]);
+        JOIN election_voters ev
+            ON ev.election_id = rv.election_id
+           AND ev.voter_id = rv.voter_id
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
+        LEFT JOIN (
+            SELECT vt1.*
+            FROM voting_tokens vt1
+            JOIN (
+                SELECT 
+                    remote_verification_id,
+                    MAX(id) AS latest_token_id
+                FROM voting_tokens
+                WHERE election_id = ?
+                GROUP BY remote_verification_id
+            ) latest_token
+                ON latest_token.latest_token_id = vt1.id
+        ) vt
+            ON vt.remote_verification_id = rv.id
+
+        WHERE rv.election_id = ?
+          AND rv.status = 'approved'
+
+        ORDER BY v.name ASC, rv.id ASC
+    ");
+
+    $stmt->execute([$electionId, $electionId]);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 
     public static function find(int $id): ?array
     {

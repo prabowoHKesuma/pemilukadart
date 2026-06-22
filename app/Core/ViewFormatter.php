@@ -157,4 +157,15 @@ class ViewFormatter
             default => 'secondary',
         };
     }
+
+    public static function electionStatusBadgeClass(?string $status): string
+    {
+        return match ($status) {
+            'draft' => 'secondary',
+            'open' => 'success',
+            'closed' => 'warning',
+            'finished' => 'dark',
+            default => 'secondary',
+        };
+    }
 }

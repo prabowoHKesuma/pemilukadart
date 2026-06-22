@@ -1,19 +1,6 @@
 <?php
 
-use App\Core\Env;
-
-$appUrl = rtrim(Env::get('APP_URL'), '/');
-
-function tokenStatusBadgeElection(string $status): string
-{
-    return match ($status) {
-        'draft' => 'secondary',
-        'open' => 'success',
-        'closed' => 'warning',
-        'finished' => 'dark',
-        default => 'secondary',
-    };
-}
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -61,31 +48,31 @@ function tokenStatusBadgeElection(string $status): string
                             <td><?= $index + 1 ?></td>
 
                             <td>
-                                <strong><?= htmlspecialchars($election['title']) ?></strong>
+                                <strong><?= F::dash($election['title'] ?? null) ?></strong>
 
                                 <?php if (!empty($election['description'])): ?>
                                     <div class="small text-muted">
-                                        <?= nl2br(htmlspecialchars($election['description'])) ?>
+                                        <?= F::nl2brSafe($election['description']) ?>
                                     </div>
                                 <?php endif; ?>
                             </td>
 
                             <td>
-                                <span class="badge bg-<?= tokenStatusBadgeElection($election['status']) ?>">
-                                    <?= htmlspecialchars(strtoupper($election['status'])) ?>
+                                <span class="badge bg-<?= F::e(F::electionStatusBadgeClass($election['status'] ?? null)) ?>">
+                                    <?= F::e(strtoupper((string) ($election['status'] ?? '-'))) ?>
                                 </span>
                             </td>
 
-                            <td><?= htmlspecialchars((string) $election['total_approved']) ?></td>
-                            <td><?= htmlspecialchars((string) $election['total_tokens']) ?></td>
-                            <td><?= htmlspecialchars((string) $election['total_active']) ?></td>
-                            <td><?= htmlspecialchars((string) $election['total_used']) ?></td>
-                            <td><?= htmlspecialchars((string) $election['total_revoked']) ?></td>
-                            <td><?= htmlspecialchars((string) $election['total_expired']) ?></td>
+                            <td><?= F::e($election['total_approved'] ?? 0) ?></td>
+                            <td><?= F::e($election['total_tokens'] ?? 0) ?></td>
+                            <td><?= F::e($election['total_active'] ?? 0) ?></td>
+                            <td><?= F::e($election['total_used'] ?? 0) ?></td>
+                            <td><?= F::e($election['total_revoked'] ?? 0) ?></td>
+                            <td><?= F::e($election['total_expired'] ?? 0) ?></td>
 
                             <td>
-                                <a 
-                                    href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/remote-tokens" 
+                                <a
+                                    href="<?= F::e($appUrl) ?>/elections/<?= F::e($election['id']) ?>/remote-tokens"
                                     class="btn btn-sm btn-primary"
                                 >
                                     Kelola

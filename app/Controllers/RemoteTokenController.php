@@ -18,166 +18,322 @@ use App\Models\RemoteVerification;
 use App\Models\VotingToken;
 use Throwable;
 
+
 class RemoteTokenController extends Controller
 {
     public function index(): void
-    {
-        Auth::requirePermission('manage_remote_token');
+{
+    Auth::requirePermission('manage_remote_token');
 
-        $elections = VotingToken::electionsWithStats();
+    $elections = VotingToken::electionsWithStats();
 
-        $this->view('remote_tokens/index', [
-            'title' => 'Token Voting Remote',
-            'elections' => $elections,
-        ]);
+    $this->view('remote_tokens/index', [
+        'title' => 'Token Voting Remote',
+        'elections' => $elections,
+    ]);
+}
+
+public function election(string $electionId): void
+{
+    Auth::requirePermission('manage_remote_token');
+
+    $election = Election::find((int) $electionId);
+
+    if (!$election) {
+        http_response_code(404);
+        die('Data pemilihan tidak ditemukan.');
     }
 
-    public function election(string $electionId): void
-    {
-        Auth::requirePermission('manage_remote_token');
+    $approvedRequests = VotingToken::approvedRemoteVerifications((int) $electionId);
+    $tokens = VotingToken::allByElection((int) $electionId);
 
-        $election = Election::find((int) $electionId);
+    // Fallback remote_token_link hanya untuk kompatibilitas dari flash key lama.
+    $generatedLink = Session::flash('generated_remote_token_link') ?? Session::flash('remote_token_link');
 
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
+    $this->view('remote_tokens/election', [
+        'title' => 'Token Voting Remote',
+        'election' => $election,
+        'approvedRequests' => $this->prepareApprovedRequests($approvedRequests, $election),
+        'tokens' => $this->prepareTokens($tokens),
+        'generatedLink' => $generatedLink,
+        'isElectionOpen' => $this->isElectionOpen($election),
+        'expiryOptions' => $this->expiryOptions(),
+    ]);
+}
 
-        $approvedRequests = VotingToken::approvedRemoteVerifications((int) $electionId);
-        $tokens = VotingToken::allByElection((int) $electionId);
+private function prepareApprovedRequests(array $approvedRequests, array $election): array
+{
+    $isElectionOpen = $this->isElectionOpen($election);
 
-        $generatedLink = Session::flash('remote_token_link');
+    return array_map(function (array $request) use ($isElectionOpen): array {
+        $status = $this->approvedRequestTokenStatus($request);
 
-        $this->view('remote_tokens/election', [
-            'title' => 'Token Voting Remote Pemilihan',
-            'election' => $election,
-            'approvedRequests' => $approvedRequests,
-            'tokens' => $tokens,
-            'generatedLink' => $generatedLink,
-        ]);
+        $hasAlreadyVoted = (int) ($request['has_voted'] ?? 0) === 1;
+
+        $request['token_status_text'] = $status['text'];
+        $request['token_status_badge'] = $status['badge'];
+        $request['token_is_active'] = $status['is_active'];
+        $request['has_already_voted'] = $hasAlreadyVoted;
+
+        $request['can_generate_token'] =
+            $isElectionOpen
+            && !$hasAlreadyVoted
+            && !$status['is_active'];
+
+        return $request;
+    }, $approvedRequests);
+}
+
+private function prepareTokens(array $tokens): array
+{
+    return array_map(function (array $token): array {
+        $status = $this->tokenRowStatus($token);
+
+        $token['status_text'] = $status['text'];
+        $token['status_badge'] = $status['badge'];
+        $token['can_revoke'] = $status['can_revoke'];
+
+        return $token;
+    }, $tokens);
+}
+
+private function approvedRequestTokenStatus(array $row): array
+{
+    if (empty($row['token_id'])) {
+        return [
+            'text' => 'Belum Ada Token',
+            'badge' => 'secondary',
+            'is_active' => false,
+        ];
     }
 
-    public function generate(string $electionId, string $remoteVerificationId): void
-    {
-        Auth::requirePermission('manage_remote_token');
-        Csrf::verify();
+    if (!empty($row['token_used_at'])) {
+        return [
+            'text' => 'Sudah Dipakai',
+            'badge' => 'success',
+            'is_active' => false,
+        ];
+    }
 
-        $election = Election::find((int) $electionId);
+    if (!empty($row['token_revoked_at'])) {
+        return [
+            'text' => 'Revoked',
+            'badge' => 'danger',
+            'is_active' => false,
+        ];
+    }
 
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
+    if ($this->isExpired($row['token_expires_at'] ?? null)) {
+        return [
+            'text' => 'Expired',
+            'badge' => 'warning',
+            'is_active' => false,
+        ];
+    }
 
-        if ($election['status'] !== 'open') {
-            Session::flash('error', 'Token remote hanya boleh dibuat saat status pemilihan OPEN.');
-            Redirect::to('/elections/' . $electionId . '/remote-tokens');
-        }
+    return [
+        'text' => 'Aktif',
+        'badge' => 'primary',
+        'is_active' => true,
+    ];
+}
 
-        $request = RemoteVerification::find((int) $remoteVerificationId);
+private function tokenRowStatus(array $token): array
+{
+    if (!empty($token['used_at'])) {
+        return [
+            'text' => 'Sudah Dipakai',
+            'badge' => 'success',
+            'can_revoke' => false,
+        ];
+    }
 
-        if (!$request || (int) $request['election_id'] !== (int) $electionId) {
-            http_response_code(404);
-            die('Request verifikasi remote tidak ditemukan.');
-        }
+    if (!empty($token['revoked_at'])) {
+        return [
+            'text' => 'Revoked',
+            'badge' => 'danger',
+            'can_revoke' => false,
+        ];
+    }
 
-        if ($request['status'] !== 'approved') {
-            Session::flash('error', 'Token hanya bisa dibuat untuk verifikasi remote yang sudah APPROVED.');
-            Redirect::to('/elections/' . $electionId . '/remote-tokens');
-        }
+    if ($this->isExpired($token['expires_at'] ?? null)) {
+        return [
+            'text' => 'Expired',
+            'badge' => 'warning',
+            'can_revoke' => false,
+        ];
+    }
 
-        if ((int) $request['has_voted'] === 1) {
-            Session::flash('error', 'Pemilih ini sudah mencoblos.');
-            Redirect::to('/elections/' . $electionId . '/remote-tokens');
-        }
+    return [
+        'text' => 'Aktif',
+        'badge' => 'primary',
+        'can_revoke' => true,
+    ];
+}
 
-        if (!in_array($request['allowed_channel'], ['remote', 'both'], true)) {
-            Session::flash('error', 'Pemilih ini tidak memiliki hak channel remote.');
-            Redirect::to('/elections/' . $electionId . '/remote-tokens');
-        }
+private function isElectionOpen(array $election): bool
+{
+    return ($election['status'] ?? '') === 'open';
+}
 
-        $activeToken = VotingToken::activeByRemoteVerification((int) $remoteVerificationId);
+private function isExpired(?string $dateTime): bool
+{
+    if (!$dateTime) {
+        return true;
+    }
 
-        if ($activeToken) {
-            Session::flash('error', 'Pemilih ini masih punya token aktif. Revoke token lama dulu jika perlu membuat baru.');
-            Redirect::to('/elections/' . $electionId . '/remote-tokens');
-        }
+    return strtotime($dateTime) <= time();
+}
 
-        $expiresMinutes = (int) ($_POST['expires_minutes'] ?? 30);
+private function expiryOptions(): array
+{
+    return [
+        5 => '5 menit',
+        15 => '15 menit',
+        30 => '30 menit',
+        60 => '60 menit',
+    ];
+}
 
-        if ($expiresMinutes < 5) {
-            $expiresMinutes = 5;
-        }
+private function normalizeExpiryMinutes(mixed $value): int
+{
+    $minutes = (int) $value;
+    $allowed = array_keys($this->expiryOptions());
 
-        if ($expiresMinutes > 240) {
-            $expiresMinutes = 240;
-        }
+    return in_array($minutes, $allowed, true) ? $minutes : 30;
+}
 
-        $plainToken = bin2hex(random_bytes(32));
-        $tokenHash = hash('sha256', $plainToken);
-        $expiresAt = date('Y-m-d H:i:s', strtotime('+' . $expiresMinutes . ' minutes'));
+public function generate(string $electionId, string $remoteVerificationId): void
+{
+    Auth::requirePermission('manage_remote_token');
+    Csrf::verify();
 
-        VotingToken::create([
+    $election = Election::find((int) $electionId);
+
+    if (!$election) {
+        http_response_code(404);
+        die('Data pemilihan tidak ditemukan.');
+    }
+
+    if (!$this->isElectionOpen($election)) {
+        Session::flash('error', 'Token remote hanya boleh dibuat saat status pemilihan OPEN.');
+        Redirect::to('/elections/' . $electionId . '/remote-tokens');
+    }
+
+    $request = RemoteVerification::find((int) $remoteVerificationId);
+
+    if (!$request || (int) $request['election_id'] !== (int) $electionId) {
+        http_response_code(404);
+        die('Request verifikasi remote tidak ditemukan.');
+    }
+
+    if (($request['status'] ?? '') !== 'approved') {
+        Session::flash('error', 'Token hanya bisa dibuat untuk verifikasi remote yang sudah APPROVED.');
+        Redirect::to('/elections/' . $electionId . '/remote-tokens');
+    }
+
+    if ((int) ($request['has_voted'] ?? 0) === 1) {
+        Session::flash('error', 'Pemilih ini sudah mencoblos.');
+        Redirect::to('/elections/' . $electionId . '/remote-tokens');
+    }
+
+    if (!in_array($request['allowed_channel'] ?? '', ['remote', 'both'], true)) {
+        Session::flash('error', 'Pemilih ini tidak memiliki hak channel remote.');
+        Redirect::to('/elections/' . $electionId . '/remote-tokens');
+    }
+
+    $activeToken = VotingToken::activeByRemoteVerification((int) $remoteVerificationId);
+
+    if ($activeToken) {
+        Session::flash('error', 'Pemilih ini masih punya token aktif. Revoke token lama dulu jika perlu membuat baru.');
+        Redirect::to('/elections/' . $electionId . '/remote-tokens');
+    }
+
+    $expiresMinutes = $this->normalizeExpiryMinutes($_POST['expires_minutes'] ?? 30);
+
+    $plainToken = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $plainToken);
+    $expiresAt = date('Y-m-d H:i:s', strtotime('+' . $expiresMinutes . ' minutes'));
+
+    VotingToken::create([
+        'election_id' => (int) $electionId,
+        'voter_id' => (int) $request['voter_id'],
+        'remote_verification_id' => (int) $remoteVerificationId,
+        'token_hash' => $tokenHash,
+        'expires_at' => $expiresAt,
+        'created_by' => Auth::id(),
+    ]);
+
+    $link = rtrim(Env::get('APP_URL'), '/') . '/remote-vote/' . $plainToken;
+
+    // Key ini harus sama dengan yang dibaca di method election().
+    Session::flash('generated_remote_token_link', $link);
+
+    AuditLog::record(
+        'remote_token_generate',
+        'Generate token voting remote untuk election ID ' . $electionId . ' dan remote verification ID ' . $remoteVerificationId . '. Expired: ' . $expiresAt,
+        null,
+        [
             'election_id' => (int) $electionId,
-            'voter_id' => (int) $request['voter_id'],
-            'remote_verification_id' => (int) $remoteVerificationId,
-            'token_hash' => $tokenHash,
-            'expires_at' => $expiresAt,
-            'created_by' => Auth::id(),
-        ]);
+            'organization_id' => $election['organization_id'] ?? null,
+            'region_id' => $election['region_id'] ?? null,
+        ]
+    );
 
-        $link = rtrim(Env::get('APP_URL'), '/') . '/remote-vote/' . $plainToken;
+    Session::flash('success', 'Token remote berhasil dibuat. Copy link sekarang, token asli tidak disimpan.');
+    Redirect::to('/elections/' . $electionId . '/remote-tokens');
+}
 
-        Session::flash('remote_token_link', $link);
+public function revoke(string $electionId, string $tokenId): void
+{
+    Auth::requirePermission('manage_remote_token');
+    Csrf::verify();
 
-        AuditLog::record(
-            'remote_token_generate',
-            'Generate token voting remote untuk election ID ' . $electionId . ' dan remote verification ID ' . $remoteVerificationId . '. Expired: ' . $expiresAt
-        );
+    $election = Election::find((int) $electionId);
 
-        Session::flash('success', 'Token remote berhasil dibuat. Copy link sekarang, token asli tidak disimpan.');
+    if (!$election) {
+        http_response_code(404);
+        die('Data pemilihan tidak ditemukan.');
+    }
+
+    $token = VotingToken::find((int) $tokenId);
+
+    if (!$token || (int) $token['election_id'] !== (int) $electionId) {
+        http_response_code(404);
+        die('Token tidak ditemukan.');
+    }
+
+    if (!empty($token['used_at'])) {
+        Session::flash('error', 'Token tidak bisa direvoke karena sudah digunakan.');
         Redirect::to('/elections/' . $electionId . '/remote-tokens');
     }
 
-    public function revoke(string $electionId, string $tokenId): void
-    {
-        Auth::requirePermission('manage_remote_token');
-        Csrf::verify();
-
-        $election = Election::find((int) $electionId);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
-
-        $token = VotingToken::find((int) $tokenId);
-
-        if (!$token || (int) $token['election_id'] !== (int) $electionId) {
-            http_response_code(404);
-            die('Token tidak ditemukan.');
-        }
-
-        if ($token['used_at']) {
-            Session::flash('error', 'Token tidak bisa direvoke karena sudah digunakan.');
-            Redirect::to('/elections/' . $electionId . '/remote-tokens');
-        }
-
-        if ($token['revoked_at']) {
-            Session::flash('error', 'Token sudah direvoke sebelumnya.');
-            Redirect::to('/elections/' . $electionId . '/remote-tokens');
-        }
-
-        VotingToken::revoke((int) $tokenId);
-
-        AuditLog::record(
-            'remote_token_revoke',
-            'Revoke token voting remote ID ' . $tokenId . ' pada election ID ' . $electionId
-        );
-
-        Session::flash('success', 'Token berhasil direvoke.');
+    if (!empty($token['revoked_at'])) {
+        Session::flash('error', 'Token sudah direvoke sebelumnya.');
         Redirect::to('/elections/' . $electionId . '/remote-tokens');
     }
+
+    if ($this->isExpired($token['expires_at'] ?? null)) {
+        Session::flash('error', 'Token sudah expired, tidak perlu direvoke.');
+        Redirect::to('/elections/' . $electionId . '/remote-tokens');
+    }
+
+    VotingToken::revoke((int) $tokenId);
+
+    AuditLog::record(
+        'remote_token_revoke',
+        'Revoke token voting remote ID ' . $tokenId . ' pada election ID ' . $electionId,
+        null,
+        [
+            'election_id' => (int) $electionId,
+            'organization_id' => $election['organization_id'] ?? null,
+            'region_id' => $election['region_id'] ?? null,
+        ]
+    );
+
+    Session::flash('success', 'Token berhasil direvoke.');
+    Redirect::to('/elections/' . $electionId . '/remote-tokens');
+}
 
     public function showVote(string $plainToken): void
     {
