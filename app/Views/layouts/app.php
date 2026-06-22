@@ -1,136 +1,6 @@
 <?php
 
-use App\Core\Auth;
 use App\Core\Csrf;
-use App\Core\Env;
-use App\Core\Session;
-
-$appName = Env::get('APP_NAME', 'RT Voting');
-$appUrl = rtrim(Env::get('APP_URL'), '/');
-$user = Auth::user();
-
-$error = Session::flash('error');
-$success = Session::flash('success');
-
-$menuTree = \App\Models\NavigationMenu::treeForCurrentUser();
-
-$currentPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-$appPath = parse_url($appUrl, PHP_URL_PATH) ?: '';
-$currentRoute = $currentPath;
-
-if ($appPath !== '' && str_starts_with($currentPath, $appPath)) {
-    $currentRoute = substr($currentPath, strlen($appPath));
-}
-
-$currentRoute = '/' . trim($currentRoute, '/');
-
-if ($currentRoute === '/') {
-    $currentRoute = '/';
-}
-
-function menuLinkUrl(string $url, string $appUrl): string
-{
-    if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-        return $url;
-    }
-
-    if ($url === '/') {
-        return $appUrl . '/';
-    }
-
-    return $appUrl . '/' . ltrim($url, '/');
-}
-
-function isMenuActive(?string $url, string $currentRoute): bool
-{
-    if (!$url) {
-        return false;
-    }
-
-    $urlRoute = '/' . trim($url, '/');
-
-    if ($urlRoute === '/') {
-        return $currentRoute === '/';
-    }
-
-    return $currentRoute === $urlRoute || str_starts_with($currentRoute, $urlRoute . '/');
-}
-
-function menuHasActiveChild(array $menu, string $currentRoute): bool
-{
-    if (!empty($menu['url']) && isMenuActive($menu['url'], $currentRoute)) {
-        return true;
-    }
-
-    if (empty($menu['children'])) {
-        return false;
-    }
-
-    foreach ($menu['children'] as $child) {
-        if (menuHasActiveChild($child, $currentRoute)) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int $level = 0, string $prefix = 'desktop'): void
-{
-    foreach ($menus as $menu) {
-        $hasChildren = !empty($menu['children']);
-        $url = $menu['url'] ?? null;
-        $title = $menu['title'];
-        $target = $menu['target'] ?? '_self';
-        $menuId = (int) $menu['id'];
-
-        if ($hasChildren) {
-            $isOpen = menuHasActiveChild($menu, $currentRoute);
-            $collapseId = $prefix . '-menu-collapse-' . $menuId;
-
-            echo '<div class="menu-parent">';
-
-            echo '<button type="button" ';
-            echo 'class="list-group-item list-group-item-action d-flex justify-content-between align-items-center menu-toggle ' . ($isOpen ? 'active-parent' : '') . '" ';
-            echo 'data-bs-toggle="collapse" ';
-            echo 'data-bs-target="#' . htmlspecialchars($collapseId) . '" ';
-            echo 'aria-expanded="' . ($isOpen ? 'true' : 'false') . '">';
-
-            echo '<span>' . htmlspecialchars($title) . '</span>';
-            echo '<span class="menu-arrow">' . ($isOpen ? '▾' : '▸') . '</span>';
-            echo '</button>';
-
-            echo '<div id="' . htmlspecialchars($collapseId) . '" class="collapse ' . ($isOpen ? 'show' : '') . '">';
-            renderMenuTree($menu['children'], $appUrl, $currentRoute, $level + 1, $prefix);
-            echo '</div>';
-
-            echo '</div>';
-
-            continue;
-        }
-
-        if (!$url) {
-            echo '<div class="list-group-item text-muted">';
-            echo htmlspecialchars($title);
-            echo '</div>';
-            continue;
-        }
-
-        $activeClass = isMenuActive($url, $currentRoute) ? ' active' : '';
-        $indentClass = $level > 0 ? ' menu-child' : '';
-
-        echo '<a href="' . htmlspecialchars(menuLinkUrl($url, $appUrl)) . '" ';
-        echo 'target="' . htmlspecialchars($target) . '" ';
-        echo 'class="list-group-item list-group-item-action' . $activeClass . $indentClass . '">';
-        echo htmlspecialchars($title);
-
-        if ($target === '_blank') {
-            echo ' <span class="small">↗</span>';
-        }
-
-        echo '</a>';
-    }
-}
 
 ?>
 <!doctype html>
@@ -251,11 +121,6 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
             border-bottom: 1px solid var(--border-color);
         }
 
-        .offcanvas-logout {
-            padding: 0.75rem 1rem;
-            border-top: 1px solid var(--border-color);
-        }
-
         .flash-wrapper {
             margin-bottom: 1rem;
         }
@@ -271,7 +136,6 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
 
             .app-sidebar {
                 min-height: calc(100vh - var(--desktop-navbar-height));
-                top: 0;
             }
         }
 
@@ -328,6 +192,7 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
         <div class="d-flex align-items-center gap-3">
             <div class="desktop-user-info">
                 <?= htmlspecialchars($user['name'] ?? '-') ?>
+
                 <?php if (!empty($user['role_label'] ?? $user['role'] ?? null)): ?>
                     <span class="text-white-50">
                         (<?= htmlspecialchars($user['role_label'] ?? $user['role']) ?>)
@@ -397,13 +262,7 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
 
     <div class="offcanvas-body p-0">
         <div class="list-group list-group-flush">
-            <?php if (empty($menuTree)): ?>
-                <div class="list-group-item text-muted">
-                    Tidak ada menu.
-                </div>
-            <?php else: ?>
-                <?php renderMenuTree($menuTree, $appUrl, $currentRoute, 0, 'mobile'); ?>
-            <?php endif; ?>
+            <?= $mobileMenuHtml ?: '<div class="list-group-item text-muted">Tidak ada menu.</div>' ?>
         </div>
     </div>
 </div>
@@ -411,13 +270,7 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
 <div class="app-shell">
     <aside class="app-sidebar app-sidebar-desktop">
         <div class="list-group list-group-flush">
-            <?php if (empty($menuTree)): ?>
-                <div class="list-group-item text-muted">
-                    Tidak ada menu.
-                </div>
-            <?php else: ?>
-                <?php renderMenuTree($menuTree, $appUrl, $currentRoute, 0, 'desktop'); ?>
-            <?php endif; ?>
+            <?= $desktopMenuHtml ?: '<div class="list-group-item text-muted">Tidak ada menu.</div>' ?>
         </div>
     </aside>
 
@@ -448,24 +301,28 @@ function renderMenuTree(array $menus, string $appUrl, string $currentRoute, int 
 document.addEventListener('shown.bs.collapse', function (event) {
     const button = document.querySelector('[data-bs-target="#' + event.target.id + '"]');
 
-    if (button) {
-        const arrow = button.querySelector('.menu-arrow');
+    if (!button) {
+        return;
+    }
 
-        if (arrow) {
-            arrow.textContent = '▾';
-        }
+    const arrow = button.querySelector('.menu-arrow');
+
+    if (arrow) {
+        arrow.textContent = '▾';
     }
 });
 
 document.addEventListener('hidden.bs.collapse', function (event) {
     const button = document.querySelector('[data-bs-target="#' + event.target.id + '"]');
 
-    if (button) {
-        const arrow = button.querySelector('.menu-arrow');
+    if (!button) {
+        return;
+    }
 
-        if (arrow) {
-            arrow.textContent = '▸';
-        }
+    const arrow = button.querySelector('.menu-arrow');
+
+    if (arrow) {
+        arrow.textContent = '▸';
     }
 });
 </script>
