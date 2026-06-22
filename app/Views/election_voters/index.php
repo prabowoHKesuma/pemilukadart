@@ -1,30 +1,7 @@
 <?php
 
-use App\Core\Auth;
 use App\Core\Csrf;
-use App\Core\Env;
-
-$appUrl = rtrim(Env::get('APP_URL'), '/');
-
-function channelLabel(string $channel): string
-{
-    return match ($channel) {
-        'tps' => 'TPS',
-        'remote' => 'Remote',
-        'both' => 'TPS / Remote',
-        default => $channel,
-    };
-}
-
-function channelBadge(string $channel): string
-{
-    return match ($channel) {
-        'tps' => 'primary',
-        'remote' => 'warning',
-        'both' => 'info',
-        default => 'secondary',
-    };
-}
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -32,17 +9,17 @@ function channelBadge(string $channel): string
     <div>
         <h1 class="h3 mb-0">Daftar Pemilih Pemilihan</h1>
         <div class="text-muted small">
-            Pemilihan: <strong><?= htmlspecialchars($election['title']) ?></strong>
+            Pemilihan: <strong><?= F::dash($election['title'] ?? null) ?></strong>
         </div>
     </div>
 
     <div class="d-flex gap-2">
-        <a href="<?= htmlspecialchars($appUrl) ?>/elections" class="btn btn-secondary">
+        <a href="<?= F::e($appUrl) ?>/elections" class="btn btn-secondary">
             Kembali
         </a>
 
-        <?php if (in_array(Auth::role(), ['superadmin', 'panitia'], true) && $election['status'] === 'draft'): ?>
-            <a href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/voters/create" class="btn btn-primary">
+        <?php if (!empty($canModifyVoters)): ?>
+            <a href="<?= F::e($appUrl) ?>/elections/<?= F::e($election['id']) ?>/voters/create" class="btn btn-primary">
                 + Tambah Pemilih
             </a>
         <?php endif; ?>
@@ -55,7 +32,7 @@ function channelBadge(string $channel): string
             <div class="card-body">
                 <div class="text-muted small">Status Pemilihan</div>
                 <div class="h5 mb-0">
-                    <?= htmlspecialchars(strtoupper($election['status'])) ?>
+                    <?= F::e(strtoupper((string) ($election['status'] ?? '-'))) ?>
                 </div>
             </div>
         </div>
@@ -66,7 +43,7 @@ function channelBadge(string $channel): string
             <div class="card-body">
                 <div class="text-muted small">Total Pemilih</div>
                 <div class="h5 mb-0">
-                    <?= htmlspecialchars((string) $totalVoters) ?>
+                    <?= F::e($totalVoters ?? 0) ?>
                 </div>
             </div>
         </div>
@@ -77,7 +54,7 @@ function channelBadge(string $channel): string
             <div class="card-body">
                 <div class="text-muted small">Sudah Mencoblos</div>
                 <div class="h5 mb-0">
-                    <?= htmlspecialchars((string) $totalVoted) ?>
+                    <?= F::e($totalVoted ?? 0) ?>
                 </div>
             </div>
         </div>
@@ -88,16 +65,16 @@ function channelBadge(string $channel): string
             <div class="card-body">
                 <div class="text-muted small">Belum Mencoblos</div>
                 <div class="h5 mb-0">
-                    <?= htmlspecialchars((string) ($totalVoters - $totalVoted)) ?>
+                    <?= F::e($totalNotVoted ?? 0) ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<?php if ($election['status'] !== 'draft'): ?>
+<?php if (!empty($isElectionLocked)): ?>
     <div class="alert alert-warning">
-        Pemilihan sudah berstatus <strong><?= htmlspecialchars(strtoupper($election['status'])) ?></strong>.
+        Pemilihan sudah berstatus <strong><?= F::e(strtoupper((string) ($election['status'] ?? '-'))) ?></strong>.
         Daftar pemilih dikunci. Perubahan hanya boleh dilakukan saat status masih draft.
     </div>
 <?php endif; ?>
@@ -131,13 +108,13 @@ function channelBadge(string $channel): string
                             <td><?= $index + 1 ?></td>
 
                             <td>
-                                <strong><?= htmlspecialchars($item['voter_code']) ?></strong>
+                                <strong><?= F::dash($item['voter_code'] ?? null) ?></strong>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars($item['name']) ?>
+                                <?= F::dash($item['name'] ?? null) ?>
 
-                                <?php if ((int) $item['is_active'] !== 1): ?>
+                                <?php if (!empty($item['is_master_inactive'])): ?>
                                     <div class="small text-danger">
                                         Pemilih nonaktif di master data
                                     </div>
@@ -145,58 +122,66 @@ function channelBadge(string $channel): string
                             </td>
 
                             <td>
-                                <?= !empty($item['address']) ? nl2br(htmlspecialchars($item['address'])) : '-' ?>
+                                <?= F::nl2brSafe($item['address'] ?? null) ?>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars(($item['rt'] ?: '-') . ' / ' . ($item['rw'] ?: '-')) ?>
+                                <?= F::e(($item['rt'] ?: '-') . ' / ' . ($item['rw'] ?: '-')) ?>
                             </td>
 
                             <td>
-                                <?= !empty($item['phone']) ? htmlspecialchars($item['phone']) : '-' ?>
+                                <?= F::dash($item['phone'] ?? null) ?>
                             </td>
 
                             <td>
-                                <span class="badge bg-<?= channelBadge($item['allowed_channel']) ?>">
-                                    <?= htmlspecialchars(channelLabel($item['allowed_channel'])) ?>
+                                <span class="badge bg-<?= F::e(F::channelBadgeClass($item['allowed_channel'] ?? null)) ?>">
+                                    <?= F::e(F::channelLabel($item['allowed_channel'] ?? null)) ?>
                                 </span>
                             </td>
 
                             <td>
-                                <?php if ((int) $item['has_voted'] === 1): ?>
+                                <?php if ((int) ($item['has_voted'] ?? 0) === 1): ?>
                                     <span class="badge bg-success">Sudah</span>
-                                    <div class="small text-muted">
-                                        <?= $item['voted_at'] ? date('d/m/Y H:i', strtotime($item['voted_at'])) : '' ?>
-                                    </div>
+
+                                    <?php if (!empty($item['voted_at'])): ?>
+                                        <div class="small text-muted">
+                                            <?= F::dateTime($item['voted_at']) ?>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <span class="badge bg-secondary">Belum</span>
                                 <?php endif; ?>
                             </td>
 
                             <td>
-                                <?php if (in_array(Auth::role(), ['superadmin', 'panitia'], true) && $election['status'] === 'draft' && (int) $item['has_voted'] !== 1): ?>
+                                <?php if (!empty($item['can_manage_row'])): ?>
                                     <div class="d-flex flex-wrap gap-1">
-                                        <form 
-                                            method="post" 
-                                            action="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/voters/<?= $item['id'] ?>/channel"
+                                        <form
+                                            method="post"
+                                            action="<?= F::e($appUrl) ?>/elections/<?= F::e($election['id']) ?>/voters/<?= F::e($item['id']) ?>/channel"
                                             class="d-inline"
                                         >
                                             <?= Csrf::field() ?>
 
-                                            <select 
-                                                name="allowed_channel" 
+                                            <select
+                                                name="allowed_channel"
                                                 class="form-select form-select-sm"
                                                 onchange="this.form.submit()"
                                             >
-                                                <option value="tps" <?= $item['allowed_channel'] === 'tps' ? 'selected' : '' ?>>TPS</option>
-                                                <option value="remote" <?= $item['allowed_channel'] === 'remote' ? 'selected' : '' ?>>Remote</option>
-                                                <option value="both" <?= $item['allowed_channel'] === 'both' ? 'selected' : '' ?>>TPS / Remote</option>
+                                                <?php foreach ($channelOptions as $value => $label): ?>
+                                                    <option
+                                                        value="<?= F::e($value) ?>"
+                                                        <?= ($item['allowed_channel'] ?? '') === $value ? 'selected' : '' ?>
+                                                    >
+                                                        <?= F::e($label) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
                                             </select>
                                         </form>
 
-                                        <form 
-                                            method="post" 
-                                            action="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/voters/<?= $item['id'] ?>/delete"
+                                        <form
+                                            method="post"
+                                            action="<?= F::e($appUrl) ?>/elections/<?= F::e($election['id']) ?>/voters/<?= F::e($item['id']) ?>/delete"
                                             onsubmit="return confirm('Yakin hapus pemilih ini dari daftar pemilihan?');"
                                         >
                                             <?= Csrf::field() ?>

@@ -1,16 +1,7 @@
 <?php
 
 use App\Core\Csrf;
-use App\Core\Env;
-
-function formatDateTimeLocal(?string $dateTime): string
-{
-    if (!$dateTime) {
-        return '';
-    }
-
-    return date('Y-m-d\TH:i', strtotime($dateTime));
-}
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -22,23 +13,26 @@ function formatDateTimeLocal(?string $dateTime): string
         </div>
     </div>
 
-    <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections" class="btn btn-secondary">
+    <a href="<?= F::e($appUrl) ?>/elections" class="btn btn-secondary">
         Kembali
     </a>
 </div>
 
 <div class="card">
     <div class="card-body">
-        <form method="post" action="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections/<?= $election['id'] ?>/update">
+        <form method="post" action="<?= F::e($appUrl) ?>/elections/<?= F::e($election['id']) ?>/update">
             <?= Csrf::field() ?>
 
             <div class="mb-3">
-                <label class="form-label">Nama Pemilihan <span class="text-danger">*</span></label>
-                <input 
-                    type="text" 
-                    name="title" 
-                    class="form-control" 
-                    value="<?= htmlspecialchars($election['title']) ?>"
+                <label class="form-label">
+                    Nama Pemilihan <span class="text-danger">*</span>
+                </label>
+
+                <input
+                    type="text"
+                    name="title"
+                    class="form-control"
+                    value="<?= F::e($election['title'] ?? '') ?>"
                     required
                     autofocus
                 >
@@ -47,15 +41,16 @@ function formatDateTimeLocal(?string $dateTime): string
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Organization</label>
+
                     <select name="organization_id" class="form-select">
                         <option value="">-- Pilih Organization --</option>
 
                         <?php foreach ($organizations as $organization): ?>
-                            <option 
-                                value="<?= htmlspecialchars((string) $organization['id']) ?>"
+                            <option
+                                value="<?= F::e($organization['id']) ?>"
                                 <?= (int) ($election['organization_id'] ?? 0) === (int) $organization['id'] ? 'selected' : '' ?>
                             >
-                                <?= htmlspecialchars($organization['name']) ?> (<?= htmlspecialchars($organization['type']) ?>)
+                                <?= F::e($organization['display_label']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -63,20 +58,16 @@ function formatDateTimeLocal(?string $dateTime): string
 
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Wilayah / Region</label>
+
                     <select name="region_id" class="form-select">
                         <option value="">-- Pilih Wilayah --</option>
 
                         <?php foreach ($regions as $region): ?>
-                            <option 
-                                value="<?= htmlspecialchars((string) $region['id']) ?>"
+                            <option
+                                value="<?= F::e($region['id']) ?>"
                                 <?= (int) ($election['region_id'] ?? 0) === (int) $region['id'] ? 'selected' : '' ?>
                             >
-                                [<?= htmlspecialchars($region['organization_name']) ?>]
-                                <?= htmlspecialchars(strtoupper($region['level'])) ?>
-                                -
-                                <?= htmlspecialchars($region['code']) ?>
-                                -
-                                <?= htmlspecialchars($region['name']) ?>
+                                <?= F::e($region['display_label']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -85,41 +76,49 @@ function formatDateTimeLocal(?string $dateTime): string
 
             <div class="mb-3">
                 <label class="form-label">Deskripsi</label>
-                <textarea 
-                    name="description" 
-                    class="form-control" 
+
+                <textarea
+                    name="description"
+                    class="form-control"
                     rows="3"
-                ><?= htmlspecialchars($election['description'] ?? '') ?></textarea>
+                ><?= F::e($election['description'] ?? '') ?></textarea>
             </div>
 
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Status</label>
+
                     <select name="status" class="form-select">
-                        <option value="draft" <?= $election['status'] === 'draft' ? 'selected' : '' ?>>Draft</option>
-                        <option value="open" <?= $election['status'] === 'open' ? 'selected' : '' ?>>Open</option>
-                        <option value="closed" <?= $election['status'] === 'closed' ? 'selected' : '' ?>>Closed</option>
-                        <option value="finished" <?= $election['status'] === 'finished' ? 'selected' : '' ?>>Finished</option>
+                        <?php foreach ($statusOptions as $value => $label): ?>
+                            <option
+                                value="<?= F::e($value) ?>"
+                                <?= ($election['status'] ?? '') === $value ? 'selected' : '' ?>
+                            >
+                                <?= F::e($label) ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Tanggal Mulai</label>
-                    <input 
-                        type="datetime-local" 
-                        name="start_at" 
+
+                    <input
+                        type="datetime-local"
+                        name="start_at"
                         class="form-control"
-                        value="<?= htmlspecialchars(formatDateTimeLocal($election['start_at'])) ?>"
+                        value="<?= F::e(F::dateTimeLocal($election['start_at'] ?? null)) ?>"
                     >
                 </div>
 
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Tanggal Selesai</label>
-                    <input 
-                        type="datetime-local" 
-                        name="end_at" 
+
+                    <input
+                        type="datetime-local"
+                        name="end_at"
                         class="form-control"
-                        value="<?= htmlspecialchars(formatDateTimeLocal($election['end_at'])) ?>"
+                        value="<?= F::e(F::dateTimeLocal($election['end_at'] ?? null)) ?>"
                     >
                 </div>
             </div>
@@ -130,7 +129,7 @@ function formatDateTimeLocal(?string $dateTime): string
                 Update
             </button>
 
-            <a href="<?= htmlspecialchars(Env::get('APP_URL')) ?>/elections" class="btn btn-light">
+            <a href="<?= F::e($appUrl) ?>/elections" class="btn btn-light">
                 Batal
             </a>
         </form>

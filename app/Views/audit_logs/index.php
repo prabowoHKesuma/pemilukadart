@@ -1,48 +1,6 @@
 <?php
 
-use App\Core\Env;
-
-$appUrl = rtrim(Env::get('APP_URL'), '/');
-
-function shortUserAgent(?string $userAgent): string
-{
-    if (!$userAgent) {
-        return '-';
-    }
-
-    return strlen($userAgent) > 80
-        ? substr($userAgent, 0, 80) . '...'
-        : $userAgent;
-}
-
-function actionBadgeClass(string $action): string
-{
-    if (str_contains($action, 'login')) {
-        return 'primary';
-    }
-
-    if (str_contains($action, 'create') || str_contains($action, 'store')) {
-        return 'success';
-    }
-
-    if (str_contains($action, 'update') || str_contains($action, 'status')) {
-        return 'warning';
-    }
-
-    if (str_contains($action, 'delete')) {
-        return 'danger';
-    }
-
-    if (str_contains($action, 'vote')) {
-        return 'dark';
-    }
-
-    if (str_contains($action, 'remote')) {
-        return 'info';
-    }
-
-    return 'secondary';
-}
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -61,30 +19,32 @@ function actionBadgeClass(string $action): string
 
 <div class="card mb-3">
     <div class="card-body">
-        <form method="get" action="<?= htmlspecialchars($appUrl) ?>/audit-logs">
+        <form method="get" action="<?= F::e($appUrl) ?>/audit-logs">
             <div class="row">
                 <div class="col-md-4 mb-2">
                     <label class="form-label">Keyword</label>
-                    <input 
-                        type="text" 
-                        name="keyword" 
+
+                    <input
+                        type="text"
+                        name="keyword"
                         class="form-control"
-                        value="<?= htmlspecialchars($filters['keyword'] ?? '') ?>"
+                        value="<?= F::e($filters['keyword'] ?? '') ?>"
                         placeholder="Cari action, deskripsi, user..."
                     >
                 </div>
 
                 <div class="col-md-3 mb-2">
                     <label class="form-label">Action</label>
+
                     <select name="action" class="form-select">
                         <option value="">Semua Action</option>
 
                         <?php foreach ($actions as $action): ?>
-                            <option 
-                                value="<?= htmlspecialchars($action) ?>"
+                            <option
+                                value="<?= F::e($action) ?>"
                                 <?= ($filters['action'] ?? '') === $action ? 'selected' : '' ?>
                             >
-                                <?= htmlspecialchars($action) ?>
+                                <?= F::e($action) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -92,21 +52,23 @@ function actionBadgeClass(string $action): string
 
                 <div class="col-md-2 mb-2">
                     <label class="form-label">Dari Tanggal</label>
-                    <input 
-                        type="date" 
-                        name="date_from" 
+
+                    <input
+                        type="date"
+                        name="date_from"
                         class="form-control"
-                        value="<?= htmlspecialchars($filters['date_from'] ?? '') ?>"
+                        value="<?= F::e($filters['date_from'] ?? '') ?>"
                     >
                 </div>
 
                 <div class="col-md-2 mb-2">
                     <label class="form-label">Sampai Tanggal</label>
-                    <input 
-                        type="date" 
-                        name="date_to" 
+
+                    <input
+                        type="date"
+                        name="date_to"
                         class="form-control"
-                        value="<?= htmlspecialchars($filters['date_to'] ?? '') ?>"
+                        value="<?= F::e($filters['date_to'] ?? '') ?>"
                     >
                 </div>
 
@@ -118,7 +80,7 @@ function actionBadgeClass(string $action): string
             </div>
 
             <div class="mt-2">
-                <a href="<?= htmlspecialchars($appUrl) ?>/audit-logs" class="btn btn-sm btn-light">
+                <a href="<?= F::e($appUrl) ?>/audit-logs" class="btn btn-sm btn-light">
                     Reset Filter
                 </a>
             </div>
@@ -153,16 +115,18 @@ function actionBadgeClass(string $action): string
                             <td><?= $index + 1 ?></td>
 
                             <td>
-                                <?= $log['created_at'] ? date('d/m/Y H:i:s', strtotime($log['created_at'])) : '-' ?>
+                                <?= F::dateTimeSecond($log['created_at'] ?? null) ?>
                             </td>
 
                             <td>
                                 <?php if (!empty($log['user_name'])): ?>
-                                    <strong><?= htmlspecialchars($log['user_name']) ?></strong>
+                                    <strong><?= F::e($log['user_name']) ?></strong>
+
                                     <div class="small text-muted">
-                                        <?= htmlspecialchars($log['username'] ?? '-') ?>
+                                        <?= F::dash($log['username'] ?? null) ?>
+
                                         <?php if (!empty($log['user_role'])): ?>
-                                            / <?= htmlspecialchars($log['user_role']) ?>
+                                            / <?= F::e($log['user_role']) ?>
                                         <?php endif; ?>
                                     </div>
                                 <?php else: ?>
@@ -171,21 +135,21 @@ function actionBadgeClass(string $action): string
                             </td>
 
                             <td>
-                                <span class="badge bg-<?= actionBadgeClass($log['action']) ?>">
-                                    <?= htmlspecialchars($log['action']) ?>
+                                <span class="badge bg-<?= F::e(F::actionBadgeClass($log['action'] ?? null)) ?>">
+                                    <?= F::dash($log['action'] ?? null) ?>
                                 </span>
                             </td>
 
                             <td>
-                                <?= !empty($log['description']) ? nl2br(htmlspecialchars($log['description'])) : '-' ?>
+                                <?= F::nl2brSafe($log['description'] ?? null) ?>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars($log['ip_address'] ?? '-') ?>
+                                <?= F::dash($log['ip_address'] ?? null) ?>
                             </td>
 
                             <td class="small">
-                                <?= htmlspecialchars(shortUserAgent($log['user_agent'] ?? null)) ?>
+                                <?= F::e(F::shortText($log['user_agent'] ?? null, 80)) ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>

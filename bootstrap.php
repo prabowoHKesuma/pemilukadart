@@ -14,6 +14,7 @@ require_once __DIR__ . '/app/Core/Auth.php';
 require_once __DIR__ . '/app/Core/RegionScope.php';
 require_once __DIR__ . '/app/Core/MenuPresenter.php';
 require_once __DIR__ . '/app/Core/LayoutData.php';
+require_once __DIR__ . '/app/Core/ViewFormatter.php';
 
 use App\Core\Env;
 use App\Core\Session;

@@ -16,7 +16,7 @@ class ElectionVoterController extends Controller
 {
     public function index(string $electionId): void
     {
-        Auth::requireLogin();
+        Auth::requirePermission('assign_voters');
 
         $election = Election::find((int) $electionId);
 
@@ -25,16 +25,40 @@ class ElectionVoterController extends Controller
             die('Data pemilihan tidak ditemukan.');
         }
 
-        $electionVoters = ElectionVoter::allByElection((int) $electionId);
-        $totalVoters = ElectionVoter::countByElection((int) $electionId);
-        $totalVoted = ElectionVoter::countVotedByElection((int) $electionId);
+        $electionVoters = ElectionVoter::byElection((int) $electionId);
+
+        $totalVoters = count($electionVoters);
+        $totalVoted = 0;
+
+        foreach ($electionVoters as $item) {
+            if ((int) ($item['has_voted'] ?? 0) === 1) {
+                $totalVoted++;
+            }
+        }
+
+        $canModifyVoters = Auth::can('assign_voters') && ($election['status'] ?? '') === 'draft';
+
+        $rows = array_map(function (array $item) use ($canModifyVoters): array {
+            $item['can_manage_row'] = $canModifyVoters && (int) ($item['has_voted'] ?? 0) !== 1;
+            $item['is_master_inactive'] = (int) ($item['is_active'] ?? 0) !== 1;
+
+            return $item;
+        }, $electionVoters);
 
         $this->view('election_voters/index', [
             'title' => 'Daftar Pemilih Pemilihan',
             'election' => $election,
-            'electionVoters' => $electionVoters,
+            'electionVoters' => $rows,
             'totalVoters' => $totalVoters,
             'totalVoted' => $totalVoted,
+            'totalNotVoted' => $totalVoters - $totalVoted,
+            'isElectionLocked' => ($election['status'] ?? '') !== 'draft',
+            'canModifyVoters' => $canModifyVoters,
+            'channelOptions' => [
+                'tps' => 'TPS',
+                'remote' => 'Remote',
+                'both' => 'TPS / Remote',
+            ],
         ]);
     }
 

@@ -305,4 +305,46 @@ class ElectionVoter
 
         return $row ?: null;
     }
+
+    public static function byElection(int $electionId): array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare("
+            SELECT
+                ev.id,
+                ev.election_id,
+                ev.voter_id,
+                ev.allowed_channel,
+                ev.has_voted,
+                ev.voted_at,
+                ev.created_at,
+
+                v.voter_code,
+                v.name,
+                v.address,
+                v.phone,
+                v.rt,
+                v.rw,
+                v.is_active,
+
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
+
+            FROM election_voters ev
+            JOIN voters v ON v.id = ev.voter_id
+            LEFT JOIN organizations o ON o.id = v.organization_id
+            LEFT JOIN regions rg ON rg.id = v.region_id
+
+            WHERE ev.election_id = ?
+
+            ORDER BY v.name ASC
+        ");
+
+        $stmt->execute([$electionId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

@@ -19,9 +19,21 @@ class RegionController extends Controller
 
         $regions = Region::all();
 
+        $regionRows = array_map(function (array $region): array {
+            $usedCount =
+                (int) ($region['total_users'] ?? 0)
+                + (int) ($region['total_voters'] ?? 0)
+                + (int) ($region['total_elections'] ?? 0);
+
+            $region['used_count'] = $usedCount;
+            $region['can_delete'] = (int) ($region['total_children'] ?? 0) === 0 && $usedCount === 0;
+
+            return $region;
+        }, $regions);
+
         $this->view('regions/index', [
             'title' => 'Region Management',
-            'regions' => $regions,
+            'regions' => $regionRows,
         ]);
     }
 
@@ -29,16 +41,45 @@ class RegionController extends Controller
     {
         Auth::requirePermission('manage_regions');
 
-        $organizations = Organization::options();
-        $regions = Region::options();
-        $levels = Region::levels();
+        $formOptions = $this->regionFormOptions();
 
         $this->view('regions/create', [
             'title' => 'Tambah Wilayah',
+            'organizations' => $formOptions['organizations'],
+            'regions' => $formOptions['regions'],
+            'levels' => $formOptions['levels'],
+        ]);
+    }
+
+    private function regionFormOptions(?int $excludeRegionId = null, ?int $organizationId = null): array
+    {
+        $levels = Region::levels();
+
+        $organizations = array_map(function (array $organization): array {
+            $organization['display_label'] = $organization['name'] . ' (' . $organization['type'] . ')';
+
+            return $organization;
+        }, Organization::options());
+
+        $regions = array_map(function (array $region) use ($levels): array {
+            $levelLabel = $levels[$region['level']] ?? strtoupper((string) $region['level']);
+
+            $region['display_label'] =
+                '[' . $region['organization_name'] . '] '
+                . $levelLabel
+                . ' - '
+                . $region['code']
+                . ' - '
+                . $region['name'];
+
+            return $region;
+        }, Region::options($organizationId, $excludeRegionId));
+
+        return [
             'organizations' => $organizations,
             'regions' => $regions,
             'levels' => $levels,
-        ]);
+        ];
     }
 
     public function store(): void
@@ -121,16 +162,17 @@ class RegionController extends Controller
             die('Wilayah tidak ditemukan.');
         }
 
-        $organizations = Organization::options();
-        $regions = Region::options((int) $region['organization_id'], (int) $id);
-        $levels = Region::levels();
+        $formOptions = $this->regionFormOptions(
+            (int) $id,
+            (int) $region['organization_id']
+        );
 
         $this->view('regions/edit', [
             'title' => 'Edit Wilayah',
             'region' => $region,
-            'organizations' => $organizations,
-            'regions' => $regions,
-            'levels' => $levels,
+            'organizations' => $formOptions['organizations'],
+            'regions' => $formOptions['regions'],
+            'levels' => $formOptions['levels'],
         ]);
     }
 
