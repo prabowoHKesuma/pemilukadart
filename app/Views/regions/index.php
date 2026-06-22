@@ -1,22 +1,7 @@
 <?php
 
 use App\Core\Csrf;
-use App\Core\Env;
-
-$appUrl = rtrim(Env::get('APP_URL'), '/');
-
-function regionLevelLabel(string $level): string
-{
-    return match ($level) {
-        'kota' => 'Kota / Kabupaten',
-        'kecamatan' => 'Kecamatan',
-        'kelurahan' => 'Kelurahan / Desa',
-        'rw' => 'RW',
-        'rt' => 'RT',
-        'custom' => 'Custom',
-        default => $level,
-    };
-}
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -28,7 +13,7 @@ function regionLevelLabel(string $level): string
         </div>
     </div>
 
-    <a href="<?= htmlspecialchars($appUrl) ?>/regions/create" class="btn btn-primary">
+    <a href="<?= F::e($appUrl) ?>/regions/create" class="btn btn-primary">
         + Tambah Wilayah
     </a>
 </div>
@@ -62,67 +47,62 @@ function regionLevelLabel(string $level): string
 
                     <tbody>
                     <?php foreach ($regions as $index => $region): ?>
-                        <?php
-                            $usedCount = (int) $region['total_users'] + (int) $region['total_voters'] + (int) $region['total_elections'];
-                            $canDelete = (int) $region['total_children'] === 0 && $usedCount === 0;
-                        ?>
-
                         <tr>
                             <td><?= $index + 1 ?></td>
 
                             <td>
-                                <?= htmlspecialchars($region['organization_name']) ?>
+                                <?= F::dash($region['organization_name'] ?? null) ?>
                             </td>
 
                             <td>
                                 <span class="badge bg-dark">
-                                    <?= htmlspecialchars(regionLevelLabel($region['level'])) ?>
+                                    <?= F::e(F::regionLevelLabel($region['level'] ?? null)) ?>
                                 </span>
                             </td>
 
                             <td>
-                                <code><?= htmlspecialchars($region['code']) ?></code>
+                                <code><?= F::dash($region['code'] ?? null) ?></code>
                             </td>
 
                             <td>
-                                <strong><?= htmlspecialchars($region['name']) ?></strong>
+                                <strong><?= F::dash($region['name'] ?? null) ?></strong>
                             </td>
 
                             <td>
                                 <?php if (!empty($region['parent_name'])): ?>
-                                    <code><?= htmlspecialchars($region['parent_code']) ?></code>
+                                    <code><?= F::e($region['parent_code'] ?? '-') ?></code>
                                     -
-                                    <?= htmlspecialchars($region['parent_name']) ?>
+                                    <?= F::e($region['parent_name']) ?>
                                 <?php else: ?>
                                     <span class="text-muted">Root</span>
                                 <?php endif; ?>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars((string) $region['total_children']) ?>
+                                <?= F::e($region['total_children'] ?? 0) ?>
                             </td>
 
                             <td>
                                 <div class="small">
-                                    User: <?= htmlspecialchars((string) $region['total_users']) ?><br>
-                                    Pemilih: <?= htmlspecialchars((string) $region['total_voters']) ?><br>
-                                    Pemilihan: <?= htmlspecialchars((string) $region['total_elections']) ?>
+                                    User: <?= F::e($region['total_users'] ?? 0) ?><br>
+                                    Pemilih: <?= F::e($region['total_voters'] ?? 0) ?><br>
+                                    Pemilihan: <?= F::e($region['total_elections'] ?? 0) ?>
                                 </div>
                             </td>
 
                             <td>
                                 <div class="d-flex gap-1">
-                                    <a 
-                                        href="<?= htmlspecialchars($appUrl) ?>/regions/<?= $region['id'] ?>/edit" 
+                                    <a
+                                        href="<?= F::e($appUrl) ?>/regions/<?= F::e($region['id']) ?>/edit"
                                         class="btn btn-sm btn-warning"
                                     >
                                         Edit
                                     </a>
 
-                                    <?php if ($canDelete): ?>
-                                        <form 
-                                            method="post" 
-                                            action="<?= htmlspecialchars($appUrl) ?>/regions/<?= $region['id'] ?>/delete"
+                                    <?php if (!empty($region['can_delete'])): ?>
+                                        <form
+                                            method="post"
+                                            action="<?= F::e($appUrl) ?>/regions/<?= F::e($region['id']) ?>/delete"
                                             onsubmit="return confirm('Yakin hapus wilayah ini?');"
                                         >
                                             <?= Csrf::field() ?>

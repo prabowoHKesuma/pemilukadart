@@ -119,12 +119,47 @@ class ElectionController extends Controller
             die('Data pemilihan tidak ditemukan.');
         }
 
+        $formOptions = $this->electionFormOptions();
+
         $this->view('elections/edit', [
             'title' => 'Edit Pemilihan',
             'election' => $election,
-            'organizations' => Organization::options(),
-            'regions' => Region::options(),
+            'organizations' => $formOptions['organizations'],
+            'regions' => $formOptions['regions'],
+            'statusOptions' => $formOptions['statusOptions'],
         ]);
+    }
+
+    private function electionFormOptions(): array
+    {
+        $organizations = array_map(function (array $organization): array {
+            $organization['display_label'] = $organization['name'] . ' (' . $organization['type'] . ')';
+
+            return $organization;
+        }, Organization::options());
+
+        $regions = array_map(function (array $region): array {
+            $region['display_label'] =
+                '[' . $region['organization_name'] . '] '
+                . strtoupper((string) $region['level'])
+                . ' - '
+                . $region['code']
+                . ' - '
+                . $region['name'];
+
+            return $region;
+        }, Region::options());
+
+        return [
+            'organizations' => $organizations,
+            'regions' => $regions,
+            'statusOptions' => [
+                'draft' => 'Draft',
+                'open' => 'Open',
+                'closed' => 'Closed',
+                'finished' => 'Finished',
+            ],
+        ];
     }
 
     public function update(string $id): void

@@ -1,9 +1,7 @@
 <?php
 
 use App\Core\Csrf;
-use App\Core\Env;
-
-$appUrl = rtrim(Env::get('APP_URL'), '/');
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -11,31 +9,34 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
     <div>
         <h1 class="h3 mb-0">Edit Wilayah</h1>
         <div class="text-muted small">
-            Wilayah: <strong><?= htmlspecialchars($region['name']) ?></strong>
+            Wilayah: <strong><?= F::dash($region['name'] ?? null) ?></strong>
         </div>
     </div>
 
-    <a href="<?= htmlspecialchars($appUrl) ?>/regions" class="btn btn-secondary">
+    <a href="<?= F::e($appUrl) ?>/regions" class="btn btn-secondary">
         Kembali
     </a>
 </div>
 
 <div class="card">
     <div class="card-body">
-        <form method="post" action="<?= htmlspecialchars($appUrl) ?>/regions/<?= $region['id'] ?>/update">
+        <form method="post" action="<?= F::e($appUrl) ?>/regions/<?= F::e($region['id']) ?>/update">
             <?= Csrf::field() ?>
 
             <div class="mb-3">
-                <label class="form-label">Organization <span class="text-danger">*</span></label>
+                <label class="form-label">
+                    Organization <span class="text-danger">*</span>
+                </label>
+
                 <select name="organization_id" class="form-select" required>
                     <option value="">-- Pilih Organization --</option>
 
                     <?php foreach ($organizations as $organization): ?>
-                        <option 
-                            value="<?= htmlspecialchars((string) $organization['id']) ?>"
-                            <?= (int) $region['organization_id'] === (int) $organization['id'] ? 'selected' : '' ?>
+                        <option
+                            value="<?= F::e($organization['id']) ?>"
+                            <?= (int) ($region['organization_id'] ?? 0) === (int) $organization['id'] ? 'selected' : '' ?>
                         >
-                            <?= htmlspecialchars($organization['name']) ?> (<?= htmlspecialchars($organization['type']) ?>)
+                            <?= F::e($organization['display_label']) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -43,20 +44,16 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
 
             <div class="mb-3">
                 <label class="form-label">Parent Wilayah</label>
+
                 <select name="parent_id" class="form-select">
                     <option value="">Root / Tidak punya parent</option>
 
                     <?php foreach ($regions as $item): ?>
-                        <option 
-                            value="<?= htmlspecialchars((string) $item['id']) ?>"
+                        <option
+                            value="<?= F::e($item['id']) ?>"
                             <?= (int) ($region['parent_id'] ?? 0) === (int) $item['id'] ? 'selected' : '' ?>
                         >
-                            [<?= htmlspecialchars($item['organization_name']) ?>]
-                            <?= htmlspecialchars(strtoupper($item['level'])) ?>
-                            -
-                            <?= htmlspecialchars($item['code']) ?>
-                            -
-                            <?= htmlspecialchars($item['name']) ?>
+                            <?= F::e($item['display_label']) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -68,39 +65,48 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
 
             <div class="row">
                 <div class="col-md-4 mb-3">
-                    <label class="form-label">Level <span class="text-danger">*</span></label>
+                    <label class="form-label">
+                        Level <span class="text-danger">*</span>
+                    </label>
+
                     <select name="level" class="form-select" required>
                         <option value="">-- Pilih Level --</option>
 
                         <?php foreach ($levels as $value => $label): ?>
-                            <option 
-                                value="<?= htmlspecialchars($value) ?>"
-                                <?= $region['level'] === $value ? 'selected' : '' ?>
+                            <option
+                                value="<?= F::e($value) ?>"
+                                <?= ($region['level'] ?? '') === $value ? 'selected' : '' ?>
                             >
-                                <?= htmlspecialchars($label) ?>
+                                <?= F::e($label) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
                 <div class="col-md-4 mb-3">
-                    <label class="form-label">Kode Wilayah <span class="text-danger">*</span></label>
-                    <input 
-                        type="text" 
-                        name="code" 
+                    <label class="form-label">
+                        Kode Wilayah <span class="text-danger">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        name="code"
                         class="form-control"
-                        value="<?= htmlspecialchars($region['code']) ?>"
+                        value="<?= F::e($region['code'] ?? '') ?>"
                         required
                     >
                 </div>
 
                 <div class="col-md-4 mb-3">
-                    <label class="form-label">Nama Wilayah <span class="text-danger">*</span></label>
-                    <input 
-                        type="text" 
-                        name="name" 
+                    <label class="form-label">
+                        Nama Wilayah <span class="text-danger">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        name="name"
                         class="form-control"
-                        value="<?= htmlspecialchars($region['name']) ?>"
+                        value="<?= F::e($region['name'] ?? '') ?>"
                         required
                         autofocus
                     >
@@ -113,7 +119,7 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
                 Update
             </button>
 
-            <a href="<?= htmlspecialchars($appUrl) ?>/regions" class="btn btn-light">
+            <a href="<?= F::e($appUrl) ?>/regions" class="btn btn-light">
                 Batal
             </a>
         </form>
