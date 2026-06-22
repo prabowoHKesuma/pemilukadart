@@ -1,47 +1,7 @@
 <?php
 
 use App\Core\Csrf;
-use App\Core\Env;
-
-$appUrl = rtrim(Env::get('APP_URL'), '/');
-
-function tokenStatus(array $row): array
-{
-    if (empty($row['token_id'])) {
-        return ['Belum Ada Token', 'secondary'];
-    }
-
-    if (!empty($row['token_used_at'])) {
-        return ['Sudah Dipakai', 'success'];
-    }
-
-    if (!empty($row['token_revoked_at'])) {
-        return ['Revoked', 'danger'];
-    }
-
-    if (!empty($row['token_expires_at']) && strtotime($row['token_expires_at']) <= time()) {
-        return ['Expired', 'warning'];
-    }
-
-    return ['Aktif', 'primary'];
-}
-
-function tokenRowStatus(array $token): array
-{
-    if (!empty($token['used_at'])) {
-        return ['Sudah Dipakai', 'success'];
-    }
-
-    if (!empty($token['revoked_at'])) {
-        return ['Revoked', 'danger'];
-    }
-
-    if (!empty($token['expires_at']) && strtotime($token['expires_at']) <= time()) {
-        return ['Expired', 'warning'];
-    }
-
-    return ['Aktif', 'primary'];
-}
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -49,16 +9,16 @@ function tokenRowStatus(array $token): array
     <div>
         <h1 class="h3 mb-0">Token Voting Remote</h1>
         <div class="text-muted small">
-            Pemilihan: <strong><?= htmlspecialchars($election['title']) ?></strong>
+            Pemilihan: <strong><?= F::dash($election['title'] ?? null) ?></strong>
         </div>
     </div>
 
-    <a href="<?= htmlspecialchars($appUrl) ?>/remote-tokens" class="btn btn-secondary">
+    <a href="<?= F::e($appUrl) ?>/remote-tokens" class="btn btn-secondary">
         Kembali
     </a>
 </div>
 
-<?php if ($election['status'] !== 'open'): ?>
+<?php if (empty($isElectionOpen)): ?>
     <div class="alert alert-warning">
         Pemilihan belum berstatus <strong>OPEN</strong>.
         Token remote hanya bisa dibuat saat pemilihan sudah dibuka.
@@ -71,13 +31,14 @@ function tokenRowStatus(array $token): array
         Copy link ini sekarang. Link tidak bisa ditampilkan lagi setelah halaman di-refresh.
 
         <div class="input-group mt-2">
-            <input 
-                type="text" 
+            <input
+                type="text"
                 id="generated-token-link"
                 class="form-control"
-                value="<?= htmlspecialchars($generatedLink) ?>"
+                value="<?= F::e($generatedLink) ?>"
                 readonly
             >
+
             <button type="button" class="btn btn-dark" onclick="copyGeneratedLink()">
                 Copy
             </button>
@@ -112,29 +73,29 @@ function tokenRowStatus(array $token): array
 
                     <tbody>
                     <?php foreach ($approvedRequests as $request): ?>
-                        <?php [$statusText, $statusBadge] = tokenStatus($request); ?>
-
                         <tr>
                             <td>
-                                <strong><?= htmlspecialchars($request['verification_code']) ?></strong>
+                                <strong><?= F::dash($request['verification_code'] ?? null) ?></strong>
                             </td>
 
                             <td>
-                                <strong><?= htmlspecialchars($request['voter_name']) ?></strong>
+                                <strong><?= F::dash($request['voter_name'] ?? null) ?></strong>
+
                                 <div class="small text-muted">
-                                    <?= htmlspecialchars($request['voter_code']) ?>
+                                    <?= F::dash($request['voter_code'] ?? null) ?>
                                 </div>
+
                                 <div class="small text-muted">
-                                    HP: <?= htmlspecialchars($request['phone'] ?? '-') ?>
+                                    HP: <?= F::dash($request['phone'] ?? null) ?>
                                 </div>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars($request['allowed_channel']) ?>
+                                <?= F::e(F::channelLabel($request['allowed_channel'] ?? null)) ?>
                             </td>
 
                             <td>
-                                <?php if ((int) $request['has_voted'] === 1): ?>
+                                <?php if (!empty($request['has_already_voted'])): ?>
                                     <span class="badge bg-success">Sudah Coblos</span>
                                 <?php else: ?>
                                     <span class="badge bg-secondary">Belum</span>
@@ -142,42 +103,41 @@ function tokenRowStatus(array $token): array
                             </td>
 
                             <td>
-                                <span class="badge bg-<?= $statusBadge ?>">
-                                    <?= htmlspecialchars($statusText) ?>
+                                <span class="badge bg-<?= F::e($request['token_status_badge'] ?? 'secondary') ?>">
+                                    <?= F::dash($request['token_status_text'] ?? null) ?>
                                 </span>
                             </td>
 
                             <td>
-                                <?= !empty($request['token_expires_at']) ? date('d/m/Y H:i', strtotime($request['token_expires_at'])) : '-' ?>
+                                <?= F::dateTime($request['token_expires_at'] ?? null) ?>
                             </td>
 
                             <td>
-                                <?php if ($election['status'] === 'open' && (int) $request['has_voted'] !== 1): ?>
-                                    <?php if (empty($request['token_id']) || !empty($request['token_used_at']) || !empty($request['token_revoked_at']) || (!empty($request['token_expires_at']) && strtotime($request['token_expires_at']) <= time())): ?>
-                                        <form 
-                                            method="post" 
-                                            action="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/remote-tokens/<?= $request['id'] ?>/generate"
-                                            class="d-flex gap-1"
-                                            onsubmit="return confirm('Generate token remote untuk pemilih ini?');"
-                                        >
-                                            <?= Csrf::field() ?>
+                                <?php if (!empty($request['can_generate_token'])): ?>
+                                    <form
+                                        method="post"
+                                        action="<?= F::e($appUrl) ?>/elections/<?= F::e($election['id']) ?>/remote-tokens/<?= F::e($request['id']) ?>/generate"
+                                        class="d-flex gap-1"
+                                        onsubmit="return confirm('Generate token remote untuk pemilih ini?');"
+                                    >
+                                        <?= Csrf::field() ?>
 
-                                            <select name="expires_minutes" class="form-select form-select-sm">
-                                                <option value="5">5 menit</option>
-                                                <option value="15">15 menit</option>
-                                                <option value="30">30 menit</option>
-                                                <option value="60">60 menit</option>
-                                            </select>
+                                        <select name="expires_minutes" class="form-select form-select-sm">
+                                            <?php foreach ($expiryOptions as $value => $label): ?>
+                                                <option value="<?= F::e($value) ?>">
+                                                    <?= F::e($label) ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
 
-                                            <button type="submit" class="btn btn-sm btn-primary">
-                                                Generate
-                                            </button>
-                                        </form>
-                                    <?php else: ?>
-                                        <span class="text-muted small">
-                                            Token masih aktif. Revoke dulu jika ingin membuat ulang.
-                                        </span>
-                                    <?php endif; ?>
+                                        <button type="submit" class="btn btn-sm btn-primary">
+                                            Generate
+                                        </button>
+                                    </form>
+                                <?php elseif (!empty($request['token_is_active'])): ?>
+                                    <span class="text-muted small">
+                                        Token masih aktif. Revoke dulu jika ingin membuat ulang.
+                                    </span>
                                 <?php else: ?>
                                     <span class="text-muted small">Tidak tersedia</span>
                                 <?php endif; ?>
@@ -220,47 +180,46 @@ function tokenRowStatus(array $token): array
 
                     <tbody>
                     <?php foreach ($tokens as $token): ?>
-                        <?php [$statusText, $statusBadge] = tokenRowStatus($token); ?>
-
                         <tr>
                             <td>
-                                <strong><?= htmlspecialchars($token['voter_name']) ?></strong>
+                                <strong><?= F::dash($token['voter_name'] ?? null) ?></strong>
+
                                 <div class="small text-muted">
-                                    <?= htmlspecialchars($token['voter_code']) ?>
+                                    <?= F::dash($token['voter_code'] ?? null) ?>
                                 </div>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars($token['verification_code'] ?? '-') ?>
+                                <?= F::dash($token['verification_code'] ?? null) ?>
                             </td>
 
                             <td>
-                                <span class="badge bg-<?= $statusBadge ?>">
-                                    <?= htmlspecialchars($statusText) ?>
+                                <span class="badge bg-<?= F::e($token['status_badge'] ?? 'secondary') ?>">
+                                    <?= F::dash($token['status_text'] ?? null) ?>
                                 </span>
                             </td>
 
                             <td>
-                                <?= $token['expires_at'] ? date('d/m/Y H:i', strtotime($token['expires_at'])) : '-' ?>
+                                <?= F::dateTime($token['expires_at'] ?? null) ?>
                             </td>
 
                             <td>
-                                <?= $token['used_at'] ? date('d/m/Y H:i', strtotime($token['used_at'])) : '-' ?>
+                                <?= F::dateTime($token['used_at'] ?? null) ?>
                             </td>
 
                             <td>
-                                <?= $token['revoked_at'] ? date('d/m/Y H:i', strtotime($token['revoked_at'])) : '-' ?>
+                                <?= F::dateTime($token['revoked_at'] ?? null) ?>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars($token['created_by_name'] ?? '-') ?>
+                                <?= F::dash($token['created_by_name'] ?? null) ?>
                             </td>
 
                             <td>
-                                <?php if (empty($token['used_at']) && empty($token['revoked_at']) && strtotime($token['expires_at']) > time()): ?>
-                                    <form 
-                                        method="post" 
-                                        action="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/remote-tokens/<?= $token['id'] ?>/revoke"
+                                <?php if (!empty($token['can_revoke'])): ?>
+                                    <form
+                                        method="post"
+                                        action="<?= F::e($appUrl) ?>/elections/<?= F::e($election['id']) ?>/remote-tokens/<?= F::e($token['id']) ?>/revoke"
                                         onsubmit="return confirm('Yakin revoke token ini?');"
                                     >
                                         <?= Csrf::field() ?>
@@ -293,7 +252,6 @@ function copyGeneratedLink() {
 
     input.select();
     input.setSelectionRange(0, 99999);
-
     document.execCommand('copy');
 
     alert('Link token berhasil dicopy.');
