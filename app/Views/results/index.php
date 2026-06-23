@@ -1,28 +1,6 @@
 <?php
 
-use App\Core\Env;
-
-$appUrl = rtrim(Env::get('APP_URL'), '/');
-
-function statusBadgeClass(string $status): string
-{
-    return match ($status) {
-        'draft' => 'secondary',
-        'open' => 'success',
-        'closed' => 'warning',
-        'finished' => 'dark',
-        default => 'secondary',
-    };
-}
-
-function percentValue(int $value, int $total): float
-{
-    if ($total <= 0) {
-        return 0;
-    }
-
-    return round(($value / $total) * 100, 2);
-}
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -66,28 +44,19 @@ function percentValue(int $value, int $total): float
 
                     <tbody>
                     <?php foreach ($elections as $index => $election): ?>
-                        <?php
-                            $totalVoters = (int) $election['total_voters'];
-                            $totalVoted = (int) $election['total_voted'];
-                            $totalBallots = (int) $election['total_ballots'];
-                            $notVoted = max($totalVoters - $totalVoted, 0);
-                            $turnoutPercent = percentValue($totalVoted, $totalVoters);
-                            $isMismatch = $totalVoted !== $totalBallots;
-                        ?>
-
                         <tr>
                             <td><?= $index + 1 ?></td>
 
                             <td>
-                                <strong><?= htmlspecialchars($election['title']) ?></strong>
+                                <strong><?= F::dash($election['title'] ?? null) ?></strong>
 
                                 <?php if (!empty($election['description'])): ?>
                                     <div class="small text-muted">
-                                        <?= nl2br(htmlspecialchars($election['description'])) ?>
+                                        <?= F::nl2brSafe($election['description']) ?>
                                     </div>
                                 <?php endif; ?>
 
-                                <?php if ($isMismatch): ?>
+                                <?php if (!empty($election['ballot_mismatch'])): ?>
                                     <div class="small text-danger mt-1">
                                         Peringatan: jumlah sudah coblos tidak sama dengan suara masuk.
                                     </div>
@@ -95,40 +64,26 @@ function percentValue(int $value, int $total): float
                             </td>
 
                             <td>
-                                <span class="badge bg-<?= statusBadgeClass($election['status']) ?>">
-                                    <?= htmlspecialchars(strtoupper($election['status'])) ?>
+                                <span class="badge bg-<?= F::e(F::electionStatusBadgeClass($election['status'] ?? null)) ?>">
+                                    <?= F::e(strtoupper((string) ($election['status'] ?? '-'))) ?>
                                 </span>
                             </td>
 
-                            <td>
-                                <?= htmlspecialchars((string) $election['total_candidates']) ?>
-                            </td>
+                            <td><?= F::e($election['total_candidates'] ?? 0) ?></td>
+                            <td><?= F::e($election['total_voters'] ?? 0) ?></td>
+                            <td><?= F::e($election['total_voted'] ?? 0) ?></td>
+                            <td><?= F::e($election['total_not_voted'] ?? 0) ?></td>
+                            <td><?= F::e($election['total_ballots'] ?? 0) ?></td>
 
                             <td>
-                                <?= htmlspecialchars((string) $totalVoters) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars((string) $totalVoted) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars((string) $notVoted) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars((string) $totalBallots) ?>
-                            </td>
-
-                            <td>
-                                <div><?= htmlspecialchars((string) $turnoutPercent) ?>%</div>
+                                <div><?= F::e($election['turnout_percent'] ?? 0) ?>%</div>
 
                                 <div class="progress" style="height: 8px;">
-                                    <div 
-                                        class="progress-bar" 
-                                        role="progressbar" 
-                                        style="width: <?= htmlspecialchars((string) $turnoutPercent) ?>%;"
-                                        aria-valuenow="<?= htmlspecialchars((string) $turnoutPercent) ?>"
+                                    <div
+                                        class="progress-bar"
+                                        role="progressbar"
+                                        style="width: <?= F::e($election['turnout_percent'] ?? 0) ?>%;"
+                                        aria-valuenow="<?= F::e($election['turnout_percent'] ?? 0) ?>"
                                         aria-valuemin="0"
                                         aria-valuemax="100"
                                     ></div>
@@ -137,23 +92,24 @@ function percentValue(int $value, int $total): float
 
                             <td>
                                 <div class="d-flex flex-wrap gap-1">
-                                    <a 
-                                        href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results" 
+                                    <a
+                                        href="<?= F::e($appUrl . $election['detail_url']) ?>"
                                         class="btn btn-sm btn-primary"
                                     >
                                         Detail
                                     </a>
-                                    <?php if (\App\Core\Auth::can('print_results')): ?>
-                                        <a 
-                                            href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/print" 
+
+                                    <?php if (!empty($canPrint)): ?>
+                                        <a
+                                            href="<?= F::e($appUrl . $election['print_url']) ?>"
                                             class="btn btn-sm btn-dark"
                                             target="_blank"
                                         >
                                             Cetak
                                         </a>
 
-                                        <a 
-                                            href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/export-csv" 
+                                        <a
+                                            href="<?= F::e($appUrl . $election['export_url']) ?>"
                                             class="btn btn-sm btn-success"
                                         >
                                             CSV
