@@ -1,50 +1,6 @@
 <?php
 
-use App\Core\Env;
-
-$appUrl = rtrim(Env::get('APP_URL'), '/');
-
-function remoteStatusLabel(array $request): string
-{
-    if ($request['status'] === 'approved') {
-        return 'Approved';
-    }
-
-    if ($request['status'] === 'rejected') {
-        return 'Rejected';
-    }
-
-    if (empty($request['ktp_photo_path']) || empty($request['selfie_photo_path'])) {
-        return 'Menunggu Upload';
-    }
-
-    if (!empty($request['verified_by_1']) && empty($request['verified_by_2'])) {
-        return 'Menunggu Approval 2';
-    }
-
-    return 'Menunggu Approval 1';
-}
-
-function remoteStatusBadge(array $request): string
-{
-    if ($request['status'] === 'approved') {
-        return 'success';
-    }
-
-    if ($request['status'] === 'rejected') {
-        return 'danger';
-    }
-
-    if (empty($request['ktp_photo_path']) || empty($request['selfie_photo_path'])) {
-        return 'secondary';
-    }
-
-    if (!empty($request['verified_by_1']) && empty($request['verified_by_2'])) {
-        return 'warning';
-    }
-
-    return 'info';
-}
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -52,26 +8,29 @@ function remoteStatusBadge(array $request): string
     <div>
         <h1 class="h3 mb-0">Verifikasi Remote Pemilihan</h1>
         <div class="text-muted small">
-            Pemilihan: <strong><?= htmlspecialchars($election['title']) ?></strong>
+            Pemilihan: <strong><?= F::dash($election['title'] ?? null) ?></strong>
         </div>
     </div>
 
     <div class="d-flex gap-2">
-        <a href="<?= htmlspecialchars($appUrl) ?>/remote-verifications" class="btn btn-secondary">
+        <a href="<?= F::e($appUrl) ?>/remote-verifications" class="btn btn-secondary">
             Kembali
         </a>
 
-        <?php if (in_array($election['status'], ['draft', 'open'], true)): ?>
-            <a href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/remote-verifications/create" class="btn btn-primary">
+        <?php if (!empty($canCreateRequest)): ?>
+            <a
+                href="<?= F::e($appUrl) ?>/elections/<?= F::e($election['id']) ?>/remote-verifications/create"
+                class="btn btn-primary"
+            >
                 + Buat Request
             </a>
         <?php endif; ?>
     </div>
 </div>
 
-<?php if (!in_array($election['status'], ['draft', 'open'], true)): ?>
+<?php if (!empty($isLocked)): ?>
     <div class="alert alert-warning">
-        Pemilihan berstatus <strong><?= htmlspecialchars(strtoupper($election['status'])) ?></strong>.
+        Pemilihan berstatus <strong><?= F::e(strtoupper((string) ($election['status'] ?? '-'))) ?></strong>.
         Verifikasi remote sudah dikunci.
     </div>
 <?php endif; ?>
@@ -105,50 +64,52 @@ function remoteStatusBadge(array $request): string
                             <td><?= $index + 1 ?></td>
 
                             <td>
-                                <strong><?= htmlspecialchars($request['verification_code']) ?></strong>
+                                <strong><?= F::dash($request['verification_code'] ?? null) ?></strong>
                             </td>
 
                             <td>
-                                <strong><?= htmlspecialchars($request['voter_name']) ?></strong>
+                                <strong><?= F::dash($request['voter_name'] ?? null) ?></strong>
+
                                 <div class="small text-muted">
-                                    <?= htmlspecialchars($request['voter_code']) ?>
+                                    <?= F::dash($request['voter_code'] ?? null) ?>
                                 </div>
+
                                 <div class="small text-muted">
-                                    <?= htmlspecialchars(($request['rt'] ?: '-') . ' / ' . ($request['rw'] ?: '-')) ?>
+                                    <?= F::dash($request['rt_rw_label'] ?? null) ?>
                                 </div>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars($request['allowed_channel'] ?? '-') ?>
+                                <?= F::e(F::channelLabel($request['allowed_channel'] ?? null)) ?>
                             </td>
 
                             <td>
-                                <span class="badge bg-<?= remoteStatusBadge($request) ?>">
-                                    <?= htmlspecialchars(remoteStatusLabel($request)) ?>
+                                <span class="badge bg-<?= F::e($request['status_badge'] ?? 'secondary') ?>">
+                                    <?= F::dash($request['status_label'] ?? null) ?>
                                 </span>
 
-                                <?php if ($request['status'] === 'rejected' && !empty($request['reject_reason'])): ?>
+                                <?php if (($request['status'] ?? '') === 'rejected' && !empty($request['reject_reason'])): ?>
                                     <div class="small text-danger mt-1">
-                                        <?= htmlspecialchars($request['reject_reason']) ?>
+                                        <?= F::e($request['reject_reason']) ?>
                                     </div>
                                 <?php endif; ?>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars($request['verifier_1_name'] ?? '-') ?>
+                                <?= F::dash($request['verifier_1_name'] ?? null) ?>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars($request['verifier_2_name'] ?? '-') ?>
+                                <?= F::dash($request['verifier_2_name'] ?? null) ?>
                             </td>
 
                             <td>
-                                <?= $request['created_at'] ? date('d/m/Y H:i', strtotime($request['created_at'])) : '-' ?>
+                                <?= F::dateTime($request['created_at'] ?? null) ?>
                             </td>
 
                             <td>
-                                <a 
-                                    href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/remote-verifications/<?= $request['id'] ?>" 
+                                <a
+                                    href="<?= F::e($appUrl) ?>/elections/<?= F::e($election['id']) ?>/remote-verifications/<?= F::e($request['id']) ?>"
                                     class="btn btn-sm btn-primary"
                                 >
                                     Detail

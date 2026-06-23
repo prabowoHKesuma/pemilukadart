@@ -38,11 +38,64 @@ class RemoteVerificationController extends Controller
 
         $requests = RemoteVerification::allByElection((int) $electionId);
 
+        $isLocked = !in_array($election['status'] ?? '', ['draft', 'open'], true);
+        
         $this->view('remote_verifications/election', [
             'title' => 'Verifikasi Remote Pemilihan',
             'election' => $election,
-            'requests' => $requests,
+            'requests' => $this->prepareRequests($requests),
+            'canCreateRequest' => !$isLocked,
+            'isLocked' => $isLocked,
         ]);
+    }
+
+    private function prepareRequests(array $requests): array
+    {
+        return array_map(function (array $request): array {
+            $status = $this->remoteStatus($request);
+
+            $request['status_label'] = $status['label'];
+            $request['status_badge'] = $status['badge'];
+            $request['rt_rw_label'] = ($request['rt'] ?: '-') . ' / ' . ($request['rw'] ?: '-');
+
+            return $request;
+        }, $requests);
+    }
+
+    private function remoteStatus(array $request): array
+    {
+        if (($request['status'] ?? '') === 'approved') {
+            return [
+                'label' => 'Approved',
+                'badge' => 'success',
+            ];
+        }
+
+        if (($request['status'] ?? '') === 'rejected') {
+            return [
+                'label' => 'Rejected',
+                'badge' => 'danger',
+            ];
+        }
+
+        if (empty($request['ktp_photo_path']) || empty($request['selfie_photo_path'])) {
+            return [
+                'label' => 'Menunggu Upload',
+                'badge' => 'secondary',
+            ];
+        }
+
+        if (!empty($request['verified_by_1']) && empty($request['verified_by_2'])) {
+            return [
+                'label' => 'Menunggu Approval 2',
+                'badge' => 'warning',
+            ];
+        }
+
+        return [
+            'label' => 'Menunggu Approval 1',
+            'badge' => 'info',
+        ];
     }
 
     public function create(string $electionId): void
