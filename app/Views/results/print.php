@@ -1,56 +1,31 @@
 <?php
 
-function printPercentValue(int $value, int $total): float
-{
-    if ($total <= 0) {
-        return 0;
-    }
-
-    return round(($value / $total) * 100, 2);
-}
-
-function printChannelLabel(string $channel): string
-{
-    return match ($channel) {
-        'tps' => 'TPS',
-        'remote' => 'Remote',
-        'both' => 'TPS / Remote',
-        default => $channel,
-    };
-}
-
-$totalVoters = (int) ($summary['total_voters'] ?? 0);
-$totalVoted = (int) ($summary['total_voted'] ?? 0);
-$totalBallots = (int) ($summary['total_ballots'] ?? 0);
-$totalCandidates = (int) ($summary['total_candidates'] ?? 0);
-$totalNotVoted = max($totalVoters - $totalVoted, 0);
-$turnoutPercent = printPercentValue($totalVoted, $totalVoters);
-$ballotMismatch = $totalVoted !== $totalBallots;
+use App\Core\ViewFormatter as F;
 
 ?>
 
 <div class="text-center mb-3">
     <h2>BERITA ACARA REKAPITULASI HASIL PEMILIHAN</h2>
-    <h3><?= htmlspecialchars($election['title']) ?></h3>
+    <h3><?= F::dash($election['title'] ?? null) ?></h3>
     <div class="text-muted">
-        Dicetak pada: <?= date('d/m/Y H:i:s') ?>
+        Dicetak pada: <?= F::dash($printedAt ?? null) ?>
     </div>
 </div>
 
-<?php if ($election['status'] === 'open'): ?>
+<?php if (!empty($isElectionOpen)): ?>
     <div class="warning">
         <strong>PERHATIAN:</strong>
         Pemilihan masih berstatus OPEN. Dokumen ini adalah hasil sementara.
     </div>
 <?php endif; ?>
 
-<?php if ($ballotMismatch): ?>
+<?php if (!empty($summary['ballot_mismatch'])): ?>
     <div class="warning">
         <strong>PERINGATAN INTEGRITAS:</strong>
         Jumlah pemilih yang tercatat sudah mencoblos adalah
-        <?= htmlspecialchars((string) $totalVoted) ?>,
+        <?= F::e($summary['total_voted']) ?>,
         sedangkan jumlah suara masuk adalah
-        <?= htmlspecialchars((string) $totalBallots) ?>.
+        <?= F::e($summary['total_ballots']) ?>.
         Seharusnya angka ini sama.
     </div>
 <?php endif; ?>
@@ -60,31 +35,31 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         <tr>
             <td style="width: 180px;">Nama Pemilihan</td>
             <td style="width: 10px;">:</td>
-            <td><strong><?= htmlspecialchars($election['title']) ?></strong></td>
+            <td><strong><?= F::dash($election['title'] ?? null) ?></strong></td>
         </tr>
 
         <tr>
             <td>Deskripsi</td>
             <td>:</td>
-            <td><?= nl2br(htmlspecialchars($election['description'] ?? '-')) ?></td>
+            <td><?= F::nl2brSafe($election['description'] ?? null) ?></td>
         </tr>
 
         <tr>
             <td>Status</td>
             <td>:</td>
-            <td><strong><?= htmlspecialchars(strtoupper($election['status'])) ?></strong></td>
+            <td><strong><?= F::e(strtoupper((string) ($election['status'] ?? '-'))) ?></strong></td>
         </tr>
 
         <tr>
             <td>Waktu Mulai</td>
             <td>:</td>
-            <td><?= $election['start_at'] ? date('d/m/Y H:i', strtotime($election['start_at'])) : '-' ?></td>
+            <td><?= F::dateTime($election['start_at'] ?? null) ?></td>
         </tr>
 
         <tr>
             <td>Waktu Selesai</td>
             <td>:</td>
-            <td><?= $election['end_at'] ? date('d/m/Y H:i', strtotime($election['end_at'])) : '-' ?></td>
+            <td><?= F::dateTime($election['end_at'] ?? null) ?></td>
         </tr>
     </table>
 </div>
@@ -102,39 +77,37 @@ $ballotMismatch = $totalVoted !== $totalBallots;
     <tbody>
     <tr>
         <td>Total Kandidat</td>
-        <td><?= htmlspecialchars((string) $totalCandidates) ?></td>
+        <td><?= F::e($summary['total_candidates']) ?></td>
     </tr>
 
     <tr>
         <td>Total Pemilih Terdaftar</td>
-        <td><?= htmlspecialchars((string) $totalVoters) ?></td>
+        <td><?= F::e($summary['total_voters']) ?></td>
     </tr>
 
     <tr>
         <td>Sudah Mencoblos</td>
-        <td><?= htmlspecialchars((string) $totalVoted) ?></td>
+        <td><?= F::e($summary['total_voted']) ?></td>
     </tr>
 
     <tr>
         <td>Belum Mencoblos</td>
-        <td><?= htmlspecialchars((string) $totalNotVoted) ?></td>
+        <td><?= F::e($summary['total_not_voted']) ?></td>
     </tr>
 
     <tr>
         <td>Total Suara Masuk</td>
-        <td><?= htmlspecialchars((string) $totalBallots) ?></td>
+        <td><?= F::e($summary['total_ballots']) ?></td>
     </tr>
 
     <tr>
         <td>Persentase Partisipasi</td>
-        <td><?= htmlspecialchars((string) $turnoutPercent) ?>%</td>
+        <td><?= F::e($summary['turnout_percent']) ?>%</td>
     </tr>
 
     <tr>
         <td>Status Integritas Data</td>
-        <td>
-            <strong><?= $ballotMismatch ? 'TIDAK SAMA' : 'OK' ?></strong>
-        </td>
+        <td><strong><?= F::e($summary['integrity_label']) ?></strong></td>
     </tr>
     </tbody>
 </table>
@@ -154,17 +127,12 @@ $ballotMismatch = $totalVoted !== $totalBallots;
 
     <tbody>
     <?php foreach ($candidateResults as $candidate): ?>
-        <?php
-            $votes = (int) $candidate['total_votes'];
-            $percent = printPercentValue($votes, $totalBallots);
-        ?>
-
         <tr>
-            <td><?= htmlspecialchars((string) $candidate['number_order']) ?></td>
-            <td><strong><?= htmlspecialchars($candidate['name']) ?></strong></td>
-            <td><?= (int) $candidate['is_active'] === 1 ? 'Aktif' : 'Nonaktif' ?></td>
-            <td><?= htmlspecialchars((string) $votes) ?></td>
-            <td><?= htmlspecialchars((string) $percent) ?>%</td>
+            <td><?= F::e($candidate['number_order'] ?? '-') ?></td>
+            <td><strong><?= F::dash($candidate['name'] ?? null) ?></strong></td>
+            <td><?= F::e($candidate['active_label'] ?? '-') ?></td>
+            <td><?= F::e($candidate['total_votes'] ?? 0) ?></td>
+            <td><?= F::e($candidate['vote_percent'] ?? 0) ?>%</td>
         </tr>
     <?php endforeach; ?>
     </tbody>
@@ -188,15 +156,10 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         </tr>
     <?php else: ?>
         <?php foreach ($channelResults as $row): ?>
-            <?php
-                $votes = (int) $row['total_votes'];
-                $percent = printPercentValue($votes, $totalBallots);
-            ?>
-
             <tr>
-                <td><?= htmlspecialchars(printChannelLabel($row['vote_channel'])) ?></td>
-                <td><?= htmlspecialchars((string) $votes) ?></td>
-                <td><?= htmlspecialchars((string) $percent) ?>%</td>
+                <td><?= F::dash($row['channel_label'] ?? null) ?></td>
+                <td><?= F::e($row['total_votes'] ?? 0) ?></td>
+                <td><?= F::e($row['vote_percent'] ?? 0) ?>%</td>
             </tr>
         <?php endforeach; ?>
     <?php endif; ?>
@@ -222,17 +185,11 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         </tr>
     <?php else: ?>
         <?php foreach ($turnoutByChannel as $row): ?>
-            <?php
-                $channelVoters = (int) $row['total_voters'];
-                $channelVoted = (int) $row['total_voted'];
-                $percent = printPercentValue($channelVoted, $channelVoters);
-            ?>
-
             <tr>
-                <td><?= htmlspecialchars(printChannelLabel($row['allowed_channel'])) ?></td>
-                <td><?= htmlspecialchars((string) $channelVoters) ?></td>
-                <td><?= htmlspecialchars((string) $channelVoted) ?></td>
-                <td><?= htmlspecialchars((string) $percent) ?>%</td>
+                <td><?= F::dash($row['channel_label'] ?? null) ?></td>
+                <td><?= F::e($row['total_voters'] ?? 0) ?></td>
+                <td><?= F::e($row['total_voted'] ?? 0) ?></td>
+                <td><?= F::e($row['turnout_percent'] ?? 0) ?>%</td>
             </tr>
         <?php endforeach; ?>
     <?php endif; ?>

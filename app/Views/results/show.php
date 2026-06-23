@@ -1,47 +1,6 @@
 <?php
 
-use App\Core\Env;
-
-$appUrl = rtrim(Env::get('APP_URL'), '/');
-
-function statusBadgeClassDetail(string $status): string
-{
-    return match ($status) {
-        'draft' => 'secondary',
-        'open' => 'success',
-        'closed' => 'warning',
-        'finished' => 'dark',
-        default => 'secondary',
-    };
-}
-
-function safePercent(int $value, int $total): float
-{
-    if ($total <= 0) {
-        return 0;
-    }
-
-    return round(($value / $total) * 100, 2);
-}
-
-function channelLabelResult(string $channel): string
-{
-    return match ($channel) {
-        'tps' => 'TPS',
-        'remote' => 'Remote',
-        'both' => 'TPS / Remote',
-        default => $channel,
-    };
-}
-
-$totalVoters = (int) ($summary['total_voters'] ?? 0);
-$totalVoted = (int) ($summary['total_voted'] ?? 0);
-$totalBallots = (int) ($summary['total_ballots'] ?? 0);
-$totalCandidates = (int) ($summary['total_candidates'] ?? 0);
-$totalNotVoted = max($totalVoters - $totalVoted, 0);
-
-$turnoutPercent = safePercent($totalVoted, $totalVoters);
-$ballotMismatch = $totalVoted !== $totalBallots;
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -49,47 +8,47 @@ $ballotMismatch = $totalVoted !== $totalBallots;
     <div>
         <h1 class="h3 mb-0">Detail Hasil Pemilihan</h1>
         <div class="text-muted small">
-            <?= htmlspecialchars($election['title']) ?>
+            <?= F::dash($election['title'] ?? null) ?>
         </div>
     </div>
 
     <div class="d-flex gap-2">
-        <?php if (\App\Core\Auth::can('print_results')): ?>
-            <a 
-                href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/print" 
+        <?php if (!empty($canPrint)): ?>
+            <a
+                href="<?= F::e($appUrl . $print_url) ?>"
                 class="btn btn-dark"
                 target="_blank"
             >
                 Cetak Berita Acara
             </a>
 
-            <a 
-                href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/results/export-csv" 
+            <a
+                href="<?= F::e($appUrl . $export_url) ?>"
                 class="btn btn-success"
             >
                 Export CSV
             </a>
         <?php endif; ?>
 
-        <a href="<?= htmlspecialchars($appUrl) ?>/results" class="btn btn-secondary">
+        <a href="<?= F::e($appUrl . $back_url) ?>" class="btn btn-secondary">
             Kembali
         </a>
     </div>
 </div>
 
-<?php if ($election['status'] === 'open'): ?>
+<?php if (!empty($isElectionOpen)): ?>
     <div class="alert alert-warning">
         Pemilihan masih berstatus <strong>OPEN</strong>. Data di halaman ini adalah hasil sementara.
     </div>
 <?php endif; ?>
 
-<?php if ($ballotMismatch): ?>
+<?php if (!empty($summary['ballot_mismatch'])): ?>
     <div class="alert alert-danger">
         <strong>Peringatan integritas:</strong>
         jumlah pemilih yang tercatat sudah mencoblos adalah
-        <strong><?= htmlspecialchars((string) $totalVoted) ?></strong>,
+        <strong><?= F::e($summary['total_voted']) ?></strong>,
         sedangkan jumlah suara masuk di tabel ballots adalah
-        <strong><?= htmlspecialchars((string) $totalBallots) ?></strong>.
+        <strong><?= F::e($summary['total_ballots']) ?></strong>.
         Seharusnya angka ini sama.
     </div>
 <?php endif; ?>
@@ -100,8 +59,8 @@ $ballotMismatch = $totalVoted !== $totalBallots;
             <div class="card-body">
                 <div class="text-muted small">Status</div>
                 <div class="h5 mb-0">
-                    <span class="badge bg-<?= statusBadgeClassDetail($election['status']) ?>">
-                        <?= htmlspecialchars(strtoupper($election['status'])) ?>
+                    <span class="badge bg-<?= F::e(F::electionStatusBadgeClass($election['status'] ?? null)) ?>">
+                        <?= F::e(strtoupper((string) ($election['status'] ?? '-'))) ?>
                     </span>
                 </div>
             </div>
@@ -112,9 +71,7 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         <div class="card">
             <div class="card-body">
                 <div class="text-muted small">Total Kandidat</div>
-                <div class="h4 mb-0">
-                    <?= htmlspecialchars((string) $totalCandidates) ?>
-                </div>
+                <div class="h4 mb-0"><?= F::e($summary['total_candidates']) ?></div>
             </div>
         </div>
     </div>
@@ -123,9 +80,7 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         <div class="card">
             <div class="card-body">
                 <div class="text-muted small">Total Pemilih</div>
-                <div class="h4 mb-0">
-                    <?= htmlspecialchars((string) $totalVoters) ?>
-                </div>
+                <div class="h4 mb-0"><?= F::e($summary['total_voters']) ?></div>
             </div>
         </div>
     </div>
@@ -134,9 +89,7 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         <div class="card">
             <div class="card-body">
                 <div class="text-muted small">Suara Masuk</div>
-                <div class="h4 mb-0">
-                    <?= htmlspecialchars((string) $totalBallots) ?>
-                </div>
+                <div class="h4 mb-0"><?= F::e($summary['total_ballots']) ?></div>
             </div>
         </div>
     </div>
@@ -147,9 +100,7 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         <div class="card">
             <div class="card-body">
                 <div class="text-muted small">Sudah Mencoblos</div>
-                <div class="h4 mb-0 text-success">
-                    <?= htmlspecialchars((string) $totalVoted) ?>
-                </div>
+                <div class="h4 mb-0 text-success"><?= F::e($summary['total_voted']) ?></div>
             </div>
         </div>
     </div>
@@ -158,9 +109,7 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         <div class="card">
             <div class="card-body">
                 <div class="text-muted small">Belum Mencoblos</div>
-                <div class="h4 mb-0 text-secondary">
-                    <?= htmlspecialchars((string) $totalNotVoted) ?>
-                </div>
+                <div class="h4 mb-0 text-secondary"><?= F::e($summary['total_not_voted']) ?></div>
             </div>
         </div>
     </div>
@@ -169,16 +118,14 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         <div class="card">
             <div class="card-body">
                 <div class="text-muted small">Partisipasi</div>
-                <div class="h4 mb-2">
-                    <?= htmlspecialchars((string) $turnoutPercent) ?>%
-                </div>
+                <div class="h4 mb-2"><?= F::e($summary['turnout_percent']) ?>%</div>
 
                 <div class="progress" style="height: 10px;">
-                    <div 
-                        class="progress-bar" 
-                        role="progressbar" 
-                        style="width: <?= htmlspecialchars((string) $turnoutPercent) ?>%;"
-                        aria-valuenow="<?= htmlspecialchars((string) $turnoutPercent) ?>"
+                    <div
+                        class="progress-bar"
+                        role="progressbar"
+                        style="width: <?= F::e($summary['turnout_percent']) ?>%;"
+                        aria-valuenow="<?= F::e($summary['turnout_percent']) ?>"
                         aria-valuemin="0"
                         aria-valuemax="100"
                     ></div>
@@ -201,29 +148,24 @@ $ballotMismatch = $totalVoted !== $totalBallots;
         <?php else: ?>
             <div class="row">
                 <?php foreach ($candidateResults as $candidate): ?>
-                    <?php
-                        $votes = (int) $candidate['total_votes'];
-                        $percent = safePercent($votes, $totalBallots);
-                    ?>
-
                     <div class="col-md-6 col-lg-4 mb-3">
                         <div class="card h-100 shadow-sm">
                             <div class="card-body text-center">
                                 <div class="mb-2">
                                     <span class="badge bg-dark fs-6">
-                                        No. <?= htmlspecialchars((string) $candidate['number_order']) ?>
+                                        No. <?= F::e($candidate['number_order'] ?? '-') ?>
                                     </span>
                                 </div>
 
-                                <?php if (!empty($candidate['photo'])): ?>
-                                    <img 
-                                        src="<?= htmlspecialchars($appUrl . '/' . $candidate['photo']) ?>" 
+                                <?php if (!empty($candidate['photo_url'])): ?>
+                                    <img
+                                        src="<?= F::e($appUrl . $candidate['photo_url']) ?>"
                                         alt="Foto kandidat"
                                         class="rounded border mb-3"
                                         style="width: 130px; height: 130px; object-fit: cover;"
                                     >
                                 <?php else: ?>
-                                    <div 
+                                    <div
                                         class="bg-light border rounded d-flex align-items-center justify-content-center text-muted mx-auto mb-3"
                                         style="width: 130px; height: 130px;"
                                     >
@@ -231,30 +173,28 @@ $ballotMismatch = $totalVoted !== $totalBallots;
                                     </div>
                                 <?php endif; ?>
 
-                                <h4 class="mb-1">
-                                    <?= htmlspecialchars($candidate['name']) ?>
-                                </h4>
+                                <h4 class="mb-1"><?= F::dash($candidate['name'] ?? null) ?></h4>
 
-                                <?php if ((int) $candidate['is_active'] !== 1): ?>
+                                <?php if (($candidate['active_label'] ?? '') === 'Nonaktif'): ?>
                                     <div class="mb-2">
                                         <span class="badge bg-secondary">Nonaktif</span>
                                     </div>
                                 <?php endif; ?>
 
                                 <div class="display-6 fw-bold mb-1">
-                                    <?= htmlspecialchars((string) $votes) ?>
+                                    <?= F::e($candidate['total_votes']) ?>
                                 </div>
 
                                 <div class="text-muted mb-2">
-                                    suara / <?= htmlspecialchars((string) $percent) ?>%
+                                    suara / <?= F::e($candidate['vote_percent']) ?>%
                                 </div>
 
                                 <div class="progress" style="height: 10px;">
-                                    <div 
-                                        class="progress-bar" 
-                                        role="progressbar" 
-                                        style="width: <?= htmlspecialchars((string) $percent) ?>%;"
-                                        aria-valuenow="<?= htmlspecialchars((string) $percent) ?>"
+                                    <div
+                                        class="progress-bar"
+                                        role="progressbar"
+                                        style="width: <?= F::e($candidate['vote_percent']) ?>%;"
+                                        aria-valuenow="<?= F::e($candidate['vote_percent']) ?>"
                                         aria-valuemin="0"
                                         aria-valuemax="100"
                                     ></div>
@@ -278,27 +218,11 @@ $ballotMismatch = $totalVoted !== $totalBallots;
 
                     <tbody>
                     <?php foreach ($candidateResults as $candidate): ?>
-                        <?php
-                            $votes = (int) $candidate['total_votes'];
-                            $percent = safePercent($votes, $totalBallots);
-                        ?>
-
                         <tr>
-                            <td>
-                                <?= htmlspecialchars((string) $candidate['number_order']) ?>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars($candidate['name']) ?>
-                            </td>
-
-                            <td>
-                                <strong><?= htmlspecialchars((string) $votes) ?></strong>
-                            </td>
-
-                            <td>
-                                <?= htmlspecialchars((string) $percent) ?>%
-                            </td>
+                            <td><?= F::e($candidate['number_order'] ?? '-') ?></td>
+                            <td><?= F::dash($candidate['name'] ?? null) ?></td>
+                            <td><strong><?= F::e($candidate['total_votes']) ?></strong></td>
+                            <td><?= F::e($candidate['vote_percent']) ?>%</td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -332,15 +256,10 @@ $ballotMismatch = $totalVoted !== $totalBallots;
 
                         <tbody>
                         <?php foreach ($channelResults as $row): ?>
-                            <?php
-                                $votes = (int) $row['total_votes'];
-                                $percent = safePercent($votes, $totalBallots);
-                            ?>
-
                             <tr>
-                                <td><?= htmlspecialchars(channelLabelResult($row['vote_channel'])) ?></td>
-                                <td><?= htmlspecialchars((string) $votes) ?></td>
-                                <td><?= htmlspecialchars((string) $percent) ?>%</td>
+                                <td><?= F::dash($row['channel_label'] ?? null) ?></td>
+                                <td><?= F::e($row['total_votes'] ?? 0) ?></td>
+                                <td><?= F::e($row['vote_percent'] ?? 0) ?>%</td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -374,17 +293,11 @@ $ballotMismatch = $totalVoted !== $totalBallots;
 
                         <tbody>
                         <?php foreach ($turnoutByChannel as $row): ?>
-                            <?php
-                                $channelVoters = (int) $row['total_voters'];
-                                $channelVoted = (int) $row['total_voted'];
-                                $percent = safePercent($channelVoted, $channelVoters);
-                            ?>
-
                             <tr>
-                                <td><?= htmlspecialchars(channelLabelResult($row['allowed_channel'])) ?></td>
-                                <td><?= htmlspecialchars((string) $channelVoters) ?></td>
-                                <td><?= htmlspecialchars((string) $channelVoted) ?></td>
-                                <td><?= htmlspecialchars((string) $percent) ?>%</td>
+                                <td><?= F::dash($row['channel_label'] ?? null) ?></td>
+                                <td><?= F::e($row['total_voters'] ?? 0) ?></td>
+                                <td><?= F::e($row['total_voted'] ?? 0) ?></td>
+                                <td><?= F::e($row['turnout_percent'] ?? 0) ?>%</td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
