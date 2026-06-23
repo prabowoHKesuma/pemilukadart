@@ -1,55 +1,7 @@
 <?php
 
-use App\Core\Auth;
 use App\Core\Csrf;
-use App\Core\Env;
-
-$appUrl = rtrim(Env::get('APP_URL'), '/');
-
-function detailStatusText(array $request): string
-{
-    if ($request['status'] === 'approved') {
-        return 'APPROVED';
-    }
-
-    if ($request['status'] === 'rejected') {
-        return 'REJECTED';
-    }
-
-    if (empty($request['ktp_photo_path']) || empty($request['selfie_photo_path'])) {
-        return 'MENUNGGU UPLOAD FOTO';
-    }
-
-    if (!empty($request['verified_by_1']) && empty($request['verified_by_2'])) {
-        return 'MENUNGGU APPROVAL KEDUA';
-    }
-
-    return 'MENUNGGU APPROVAL PERTAMA';
-}
-
-function detailStatusBadge(array $request): string
-{
-    if ($request['status'] === 'approved') {
-        return 'success';
-    }
-
-    if ($request['status'] === 'rejected') {
-        return 'danger';
-    }
-
-    if (empty($request['ktp_photo_path']) || empty($request['selfie_photo_path'])) {
-        return 'secondary';
-    }
-
-    if (!empty($request['verified_by_1']) && empty($request['verified_by_2'])) {
-        return 'warning';
-    }
-
-    return 'info';
-}
-
-$canProcess = $request['status'] === 'pending';
-$hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo_path']);
+use App\Core\ViewFormatter as F;
 
 ?>
 
@@ -57,11 +9,11 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
     <div>
         <h1 class="h3 mb-0">Detail Verifikasi Remote</h1>
         <div class="text-muted small">
-            Pemilihan: <strong><?= htmlspecialchars($election['title']) ?></strong>
+            Pemilihan: <strong><?= F::dash($election['title'] ?? null) ?></strong>
         </div>
     </div>
 
-    <a href="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/remote-verifications" class="btn btn-secondary">
+    <a href="<?= F::e($appUrl . $request['back_url']) ?>" class="btn btn-secondary">
         Kembali
     </a>
 </div>
@@ -72,8 +24,8 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
             <div class="card-body">
                 <div class="text-muted small">Status</div>
                 <div>
-                    <span class="badge bg-<?= detailStatusBadge($request) ?>">
-                        <?= htmlspecialchars(detailStatusText($request)) ?>
+                    <span class="badge bg-<?= F::e($request['detail_status_badge'] ?? 'secondary') ?>">
+                        <?= F::dash($request['detail_status_text'] ?? null) ?>
                     </span>
                 </div>
             </div>
@@ -85,7 +37,7 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
             <div class="card-body">
                 <div class="text-muted small">Kode Verifikasi</div>
                 <div class="h3 mb-0">
-                    <?= htmlspecialchars($request['verification_code']) ?>
+                    <?= F::dash($request['verification_code'] ?? null) ?>
                 </div>
             </div>
         </div>
@@ -96,7 +48,7 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
             <div class="card-body">
                 <div class="text-muted small">Expired Request</div>
                 <div class="h6 mb-0">
-                    <?= $request['expires_at'] ? date('d/m/Y H:i', strtotime($request['expires_at'])) : '-' ?>
+                    <?= F::dateTime($request['expires_at'] ?? null) ?>
                 </div>
             </div>
         </div>
@@ -106,7 +58,7 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
 <div class="alert alert-warning">
     Instruksi untuk pemilih:
     foto selfie harus memegang KTP atau kertas bertuliskan kode
-    <strong><?= htmlspecialchars($request['verification_code']) ?></strong>.
+    <strong><?= F::dash($request['verification_code'] ?? null) ?></strong>.
 </div>
 
 <div class="card mb-3">
@@ -118,37 +70,37 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
         <div class="row">
             <div class="col-md-3 mb-2">
                 <div class="text-muted small">Kode Pemilih</div>
-                <strong><?= htmlspecialchars($request['voter_code']) ?></strong>
+                <strong><?= F::dash($request['voter_code'] ?? null) ?></strong>
             </div>
 
             <div class="col-md-3 mb-2">
                 <div class="text-muted small">Nama</div>
-                <strong><?= htmlspecialchars($request['voter_name']) ?></strong>
+                <strong><?= F::dash($request['voter_name'] ?? null) ?></strong>
             </div>
 
             <div class="col-md-3 mb-2">
                 <div class="text-muted small">RT/RW</div>
-                <strong><?= htmlspecialchars(($request['rt'] ?: '-') . ' / ' . ($request['rw'] ?: '-')) ?></strong>
+                <strong><?= F::dash($request['rt_rw_label'] ?? null) ?></strong>
             </div>
 
             <div class="col-md-3 mb-2">
                 <div class="text-muted small">HP</div>
-                <strong><?= htmlspecialchars($request['phone'] ?? '-') ?></strong>
+                <strong><?= F::dash($request['phone'] ?? null) ?></strong>
             </div>
         </div>
     </div>
 </div>
 
-<?php if ($canProcess): ?>
+<?php if (!empty($request['can_upload_photos'])): ?>
     <div class="card mb-3">
         <div class="card-header">
             <strong>Upload Foto Verifikasi</strong>
         </div>
 
         <div class="card-body">
-            <form 
-                method="post" 
-                action="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/remote-verifications/<?= $request['id'] ?>/upload"
+            <form
+                method="post"
+                action="<?= F::e($appUrl . $request['upload_url']) ?>"
                 enctype="multipart/form-data"
             >
                 <?= Csrf::field() ?>
@@ -156,9 +108,9 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Foto KTP</label>
-                        <input 
-                            type="file" 
-                            name="ktp_photo" 
+                        <input
+                            type="file"
+                            name="ktp_photo"
                             class="form-control"
                             accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                             required
@@ -167,9 +119,9 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
 
                     <div class="col-md-6 mb-3">
                         <label class="form-label">Foto Selfie + Kode Verifikasi</label>
-                        <input 
-                            type="file" 
-                            name="selfie_photo" 
+                        <input
+                            type="file"
+                            name="selfie_photo"
                             class="form-control"
                             accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                             required
@@ -178,10 +130,10 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
                 </div>
 
                 <div class="form-check mb-3">
-                    <input 
-                        type="checkbox" 
-                        name="consent_accepted" 
-                        id="consent_accepted" 
+                    <input
+                        type="checkbox"
+                        name="consent_accepted"
+                        id="consent_accepted"
                         class="form-check-input"
                         required
                     >
@@ -206,9 +158,9 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
             </div>
 
             <div class="card-body text-center">
-                <?php if (!empty($request['ktp_photo_path'])): ?>
-                    <img 
-                        src="<?= htmlspecialchars($appUrl) ?>/remote-verifications/<?= $request['id'] ?>/file/ktp"
+                <?php if (!empty($request['ktp_file_url'])): ?>
+                    <img
+                        src="<?= F::e($appUrl . $request['ktp_file_url']) ?>"
                         class="img-fluid rounded border"
                         style="max-height: 420px;"
                         alt="Foto KTP"
@@ -229,9 +181,9 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
             </div>
 
             <div class="card-body text-center">
-                <?php if (!empty($request['selfie_photo_path'])): ?>
-                    <img 
-                        src="<?= htmlspecialchars($appUrl) ?>/remote-verifications/<?= $request['id'] ?>/file/selfie"
+                <?php if (!empty($request['selfie_file_url'])): ?>
+                    <img
+                        src="<?= F::e($appUrl . $request['selfie_file_url']) ?>"
                         class="img-fluid rounded border"
                         style="max-height: 420px;"
                         alt="Foto Selfie"
@@ -255,26 +207,26 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
         <div class="row mb-3">
             <div class="col-md-6">
                 <div class="text-muted small">Approval 1</div>
-                <strong><?= htmlspecialchars($request['verifier_1_name'] ?? '-') ?></strong>
+                <strong><?= F::dash($request['verifier_1_name'] ?? null) ?></strong>
             </div>
 
             <div class="col-md-6">
                 <div class="text-muted small">Approval 2</div>
-                <strong><?= htmlspecialchars($request['verifier_2_name'] ?? '-') ?></strong>
+                <strong><?= F::dash($request['verifier_2_name'] ?? null) ?></strong>
             </div>
         </div>
 
-        <?php if ($request['status'] === 'rejected'): ?>
+        <?php if (($request['status'] ?? '') === 'rejected'): ?>
             <div class="alert alert-danger">
                 <strong>Alasan ditolak:</strong>
-                <?= nl2br(htmlspecialchars($request['reject_reason'] ?? '-')) ?>
+                <?= F::nl2brSafe($request['reject_reason'] ?? null) ?>
             </div>
         <?php endif; ?>
 
-        <?php if ($canProcess && $hasPhotos): ?>
-            <form 
-                method="post" 
-                action="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/remote-verifications/<?= $request['id'] ?>/approve"
+        <?php if (!empty($request['can_approve'])): ?>
+            <form
+                method="post"
+                action="<?= F::e($appUrl . $request['approve_url']) ?>"
                 class="d-inline"
                 onsubmit="return confirm('Yakin approve verifikasi remote ini?');"
             >
@@ -286,19 +238,24 @@ $hasPhotos = !empty($request['ktp_photo_path']) && !empty($request['selfie_photo
             </form>
         <?php endif; ?>
 
-        <?php if ($canProcess): ?>
+        <?php if (!empty($request['can_reject'])): ?>
             <hr>
 
-            <form 
-                method="post" 
-                action="<?= htmlspecialchars($appUrl) ?>/elections/<?= $election['id'] ?>/remote-verifications/<?= $request['id'] ?>/reject"
+            <form
+                method="post"
+                action="<?= F::e($appUrl . $request['reject_url']) ?>"
                 onsubmit="return confirm('Yakin tolak verifikasi remote ini?');"
             >
                 <?= Csrf::field() ?>
 
                 <div class="mb-2">
                     <label class="form-label">Alasan Penolakan</label>
-                    <textarea name="reject_reason" class="form-control" rows="3" placeholder="Contoh: foto KTP tidak jelas / selfie tidak memegang kode"></textarea>
+                    <textarea
+                        name="reject_reason"
+                        class="form-control"
+                        rows="3"
+                        placeholder="Contoh: foto KTP tidak jelas / selfie tidak memegang kode"
+                    ></textarea>
                 </div>
 
                 <button type="submit" class="btn btn-danger">
