@@ -196,11 +196,88 @@ class RemoteVerificationController extends Controller
             die('Request verifikasi remote tidak ditemukan.');
         }
 
+        $preparedRequest = $this->prepareRequestDetail($request, $election);
+
         $this->view('remote_verifications/show', [
             'title' => 'Detail Verifikasi Remote',
             'election' => $election,
-            'request' => $request,
+            'request' => $preparedRequest,
         ]);
+    }
+
+    private function prepareRequestDetail(array $request, array $election): array
+    {
+        $status = $this->remoteDetailStatus($request);
+
+        $hasPhotos =
+            !empty($request['ktp_photo_path'])
+            && !empty($request['selfie_photo_path']);
+
+        $canProcess = ($request['status'] ?? '') === 'pending';
+
+        $request['detail_status_text'] = $status['text'];
+        $request['detail_status_badge'] = $status['badge'];
+
+        $request['has_photos'] = $hasPhotos;
+        $request['can_process'] = $canProcess;
+        $request['can_upload_photos'] = $canProcess;
+        $request['can_approve'] = $canProcess && $hasPhotos;
+        $request['can_reject'] = $canProcess;
+
+        $request['rt_rw_label'] = ($request['rt'] ?: '-') . ' / ' . ($request['rw'] ?: '-');
+
+        $baseUrl = '/elections/' . (int) $election['id'] . '/remote-verifications/' . (int) $request['id'];
+
+        $request['back_url'] = '/elections/' . (int) $election['id'] . '/remote-verifications';
+        $request['upload_url'] = $baseUrl . '/upload';
+        $request['approve_url'] = $baseUrl . '/approve';
+        $request['reject_url'] = $baseUrl . '/reject';
+
+        $request['ktp_file_url'] = !empty($request['ktp_photo_path'])
+            ? '/remote-verifications/' . (int) $request['id'] . '/file/ktp'
+            : null;
+
+        $request['selfie_file_url'] = !empty($request['selfie_photo_path'])
+            ? '/remote-verifications/' . (int) $request['id'] . '/file/selfie'
+            : null;
+
+        return $request;
+    }
+
+    private function remoteDetailStatus(array $request): array
+    {
+        if (($request['status'] ?? '') === 'approved') {
+            return [
+                'text' => 'APPROVED',
+                'badge' => 'success',
+            ];
+        }
+
+        if (($request['status'] ?? '') === 'rejected') {
+            return [
+                'text' => 'REJECTED',
+                'badge' => 'danger',
+            ];
+        }
+
+        if (empty($request['ktp_photo_path']) || empty($request['selfie_photo_path'])) {
+            return [
+                'text' => 'MENUNGGU UPLOAD FOTO',
+                'badge' => 'secondary',
+            ];
+        }
+
+        if (!empty($request['verified_by_1']) && empty($request['verified_by_2'])) {
+            return [
+                'text' => 'MENUNGGU APPROVAL KEDUA',
+                'badge' => 'warning',
+            ];
+        }
+
+        return [
+            'text' => 'MENUNGGU APPROVAL PERTAMA',
+            'badge' => 'info',
+        ];
     }
 
     public function upload(string $electionId, string $id): void
