@@ -228,4 +228,55 @@ class Voter
 
         return (int) $stmt->fetchColumn() > 0;
     }
+
+    public static function availableForElection(array $election): array
+    {
+        $pdo = Database::connection();
+
+        $electionId = (int) $election['id'];
+        $targetRegionId = !empty($election['region_id']) ? (int) $election['region_id'] : null;
+
+        [$regionSql, $regionParams] = RegionScope::andSqlForTarget('v', $targetRegionId);
+
+        $where = [
+            'v.is_active = 1',
+            'ev.id IS NULL',
+        ];
+
+        $params = [$electionId];
+
+        if (!empty($election['organization_id'])) {
+            $where[] = 'v.organization_id = ?';
+            $params[] = (int) $election['organization_id'];
+        }
+
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                v.*,
+                o.name AS organization_name,
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
+
+            FROM voters v
+
+            LEFT JOIN election_voters ev
+                ON ev.voter_id = v.id
+            AND ev.election_id = ?
+
+            LEFT JOIN organizations o ON o.id = v.organization_id
+            LEFT JOIN regions rg ON rg.id = v.region_id
+
+            {$whereSql}
+            {$regionSql}
+
+            ORDER BY v.name ASC
+        ");
+
+        $stmt->execute(array_merge($params, $regionParams));
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
