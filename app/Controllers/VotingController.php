@@ -34,16 +34,31 @@ class VotingController extends Controller
     public function searchVoter(string $electionId): void
     {
         Auth::requirePermission('tps_validate');
+        Csrf::verify();
 
+        $electionId = (int) ($_POST['election_id'] ?? 0);
+        $voterCode = trim($_POST['voter_code'] ?? '');
         $election = Election::find((int) $electionId);
 
         if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
+            Session::flash('error', 'Pemilihan tidak ditemukan atau berada di luar scope wilayah Anda.');
+            Redirect::to('/tps-voting');
         }
 
         if ($election['status'] !== 'open') {
             Session::flash('error', 'Voting TPS hanya bisa digunakan saat status pemilihan OPEN.');
+            Redirect::to('/tps-voting');
+        }
+
+        if ($voterCode === '') {
+            Session::flash('error', 'Kode pemilih wajib diisi.');
+            Redirect::to('/tps-voting');
+        }
+
+        $electionVoter = ElectionVoter::findForTpsValidation($election, $voterCode);
+
+        if (!$electionVoter) {
+            Session::flash('error', 'Pemilih tidak ditemukan, bukan hak TPS, atau berada di luar scope wilayah.');
             Redirect::to('/tps-voting');
         }
 
@@ -245,7 +260,11 @@ class VotingController extends Controller
             Redirect::to('/tps-voting');
         }
 
-        $electionVoter = ElectionVoter::findDetailForVoting((int) $electionId, (int) $electionVoterId);
+        $electionVoter = ElectionVoter::findScopedForElection(
+            (int) $electionId,
+            (int) $electionVoterId,
+            !empty($election['region_id']) ? (int) $election['region_id'] : null
+        );
 
         if (!$electionVoter) {
             http_response_code(404);

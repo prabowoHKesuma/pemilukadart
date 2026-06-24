@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Database;
+use App\Core\RegionScope;
 use PDO;
 
 class ElectionVoter
@@ -346,5 +347,94 @@ class ElectionVoter
         $stmt->execute([$electionId]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function findScopedForElection(int $electionId, int $electionVoterId, ?int $targetRegionId = null): ?array
+    {
+        $pdo = Database::connection();
+
+        [$regionSql, $regionParams] = RegionScope::andSqlForTarget('v', $targetRegionId);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                ev.*,
+
+                v.voter_code,
+                v.name,
+                v.address,
+                v.phone,
+                v.rt,
+                v.rw,
+                v.is_active,
+                v.organization_id,
+                v.region_id,
+
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
+
+            FROM election_voters ev
+
+            JOIN voters v ON v.id = ev.voter_id
+            LEFT JOIN regions rg ON rg.id = v.region_id
+
+            WHERE ev.election_id = ?
+            AND ev.id = ?
+            {$regionSql}
+
+            LIMIT 1
+        ");
+
+        $stmt->execute(array_merge([$electionId, $electionVoterId], $regionParams));
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    public static function findForTpsValidation(array $election, string $voterCode): ?array
+    {
+        $pdo = Database::connection();
+
+        $targetRegionId = !empty($election['region_id']) ? (int) $election['region_id'] : null;
+
+        [$regionSql, $regionParams] = RegionScope::andSqlForTarget('v', $targetRegionId);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                ev.*,
+
+                v.voter_code,
+                v.name,
+                v.address,
+                v.phone,
+                v.rt,
+                v.rw,
+                v.is_active,
+                v.organization_id,
+                v.region_id,
+
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
+
+            FROM election_voters ev
+
+            JOIN voters v ON v.id = ev.voter_id
+            LEFT JOIN regions rg ON rg.id = v.region_id
+
+            WHERE ev.election_id = ?
+            AND v.voter_code = ?
+            AND ev.allowed_channel IN ('tps', 'both')
+            {$regionSql}
+
+            LIMIT 1
+        ");
+
+        $stmt->execute(array_merge([(int) $election['id'], $voterCode], $regionParams));
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
     }
 }
