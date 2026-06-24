@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 22, 2026 at 01:43 AM
+-- Generation Time: Jun 25, 2026 at 12:10 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -236,6 +236,22 @@ CREATE TABLE `regions` (
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `regions`
+--
+
+INSERT INTO `regions` (`id`, `organization_id`, `parent_id`, `level`, `code`, `name`, `created_at`, `updated_at`) VALUES
+(2, 1, NULL, 'kota', 'MLG-3573', 'Malang Kota', '2026-06-22 16:51:52', '2026-06-22 16:54:22'),
+(3, 1, 2, 'kecamatan', 'MLG-357304', 'Kecamatan Sukun', '2026-06-22 16:53:08', '2026-06-22 16:56:43'),
+(4, 1, 3, 'kelurahan', 'MLG-3573041005', 'Kelurahan Sukun', '2026-06-22 16:56:36', NULL),
+(5, 1, 4, 'rw', 'MLG-3573041005004', 'RW 004', '2026-06-22 16:58:19', NULL),
+(6, 1, 5, 'rt', 'MLG-3573041005004011', 'RT 011', '2026-06-22 16:58:53', NULL),
+(7, 1, NULL, 'kota', 'MLG-3507', 'Kabupaten Malang', '2026-06-24 04:10:44', NULL),
+(8, 1, 7, 'kecamatan', 'MLG-350722', 'Kecamatan Dau', '2026-06-24 04:13:26', NULL),
+(9, 1, 8, 'kelurahan', 'MLG-3507222002', 'Kelurahan Kalisongo', '2026-06-24 04:15:20', NULL),
+(10, 1, 9, 'rw', 'MLG-3507222002001', 'RW 001', '2026-06-24 04:16:19', NULL),
+(11, 1, 10, 'rt', 'MLG-3507222002001001', 'RT 001', '2026-06-24 04:16:55', NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -434,11 +450,12 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `username`, `password`, `role`, `role_id`, `organization_id`, `region_id`, `is_active`, `last_login_at`, `created_at`, `updated_at`) VALUES
-(1, 'Administrator', 'admin', '$2y$10$cnqm8wwPK0qxRzTdEOzM8uevHGOtmLF55iiGu3v7Ez9HHPAosLcq6', 'superadmin', 1, 1, NULL, 1, '2026-06-22 06:40:58', '2026-06-17 06:45:51', NULL),
-(5, 'panitia test', 'panitia1', '$2y$10$j8zf966eudiQWQjyiF85puvtI1Ixh0cr0jaQWVCpMWfrKOlZLF.E2', 'panitia', 2, NULL, NULL, 1, '2026-06-22 05:11:17', '2026-06-21 21:36:59', NULL),
-(6, 'auditor test', 'auditor1', '$2y$10$zw.DwTh1xgqI33poUGSBpOYV2j8rSQQAuIgdFmI4wFh/QDeQzrDmy', 'auditor', 4, 1, NULL, 1, '2026-06-22 05:11:38', '2026-06-21 21:37:34', NULL),
-(7, 'saksi test', 'saksi001', '$2y$10$1aKpqUGu9RYwfZbOQfzt5eaBjjcJRYNPNkeHrVrgu0vZHDjKhX6u6', 'saksi', 3, 1, NULL, 1, '2026-06-21 21:39:18', '2026-06-21 21:38:33', NULL),
-(8, 'viewer test', 'viewer01', '$2y$10$A/yhQboCkDJQHrSXAoQlmuEmX781u3zunTfSVE9Nb6ljku/Cb6BHW', 'viewer', 5, 1, NULL, 1, '2026-06-21 21:39:07', '2026-06-21 21:39:01', NULL);
+(1, 'Administrator', 'admin', '$2y$10$cnqm8wwPK0qxRzTdEOzM8uevHGOtmLF55iiGu3v7Ez9HHPAosLcq6', 'superadmin', 1, 1, NULL, 1, '2026-06-24 03:54:19', '2026-06-17 06:45:51', NULL),
+(5, 'panitia test', 'panitia1', '$2y$10$j8zf966eudiQWQjyiF85puvtI1Ixh0cr0jaQWVCpMWfrKOlZLF.E2', 'panitia', 2, 1, 6, 1, '2026-06-24 04:19:18', '2026-06-21 21:36:59', NULL),
+(6, 'auditor test', 'auditor1', '$2y$10$zw.DwTh1xgqI33poUGSBpOYV2j8rSQQAuIgdFmI4wFh/QDeQzrDmy', 'auditor', 4, 1, 6, 1, '2026-06-24 02:24:49', '2026-06-21 21:37:34', NULL),
+(7, 'saksi test', 'saksi001', '$2y$10$1aKpqUGu9RYwfZbOQfzt5eaBjjcJRYNPNkeHrVrgu0vZHDjKhX6u6', 'saksi', 3, 1, 6, 1, '2026-06-24 02:25:31', '2026-06-21 21:38:33', NULL),
+(8, 'viewer test', 'viewer01', '$2y$10$A/yhQboCkDJQHrSXAoQlmuEmX781u3zunTfSVE9Nb6ljku/Cb6BHW', 'viewer', 5, 1, 6, 1, '2026-06-24 02:25:05', '2026-06-21 21:39:01', NULL),
+(9, 'panitia test 2', 'panitia2', '$2y$10$mcvJI33dlhEUGJKI9Qr/jOk2SQvKJRMccuUUDborjIhxSfgb.0khm', 'panitia', 2, 1, 7, 1, NULL, '2026-06-24 04:18:37', NULL);
 
 -- --------------------------------------------------------
 
@@ -695,7 +712,7 @@ ALTER TABLE `permissions`
 -- AUTO_INCREMENT for table `regions`
 --
 ALTER TABLE `regions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `remote_verifications`
@@ -731,7 +748,7 @@ ALTER TABLE `tps_booth_tokens`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `voters`
