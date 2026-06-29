@@ -76,6 +76,7 @@ $router->post('/elections/{electionId}/remote-verifications/{id}/upload', [Remot
 $router->post('/elections/{electionId}/remote-verifications/{id}/approve', [RemoteVerificationController::class, 'approve']);
 $router->post('/elections/{electionId}/remote-verifications/{id}/reject', [RemoteVerificationController::class, 'reject']);
 $router->get('/remote-verifications/{id}/file/{type}', [RemoteVerificationController::class, 'file']);
+$router->post('/elections/{electionId}/remote-verifications/{id}/regenerate-upload-link', [RemoteVerificationController::class, 'regenerateUploadLink']);
 
 $router->get('/remote-tokens', [RemoteTokenController::class, 'index']);
 $router->get('/elections/{electionId}/remote-tokens', [RemoteTokenController::class, 'election']);

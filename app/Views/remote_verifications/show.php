@@ -39,6 +39,33 @@ use App\Core\ViewFormatter as F;
     </div>
 <?php endif; ?>
 
+<?php if (!empty($request['can_regenerate_upload_link'])): ?>
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Link Upload Pemilih</strong>
+        </div>
+
+        <div class="card-body">
+            <p class="mb-2">
+                Gunakan tombol ini jika link upload hilang, expired, atau perlu dikirim ulang ke pemilih.
+                Link baru hanya tampil sekali setelah dibuat.
+            </p>
+
+            <form
+                method="post"
+                action="<?= F::e($appUrl . $request['regenerate_upload_link_url']) ?>"
+                onsubmit="return confirm('Generate ulang link upload untuk pemilih ini? Link lama akan tidak berlaku.');"
+            >
+                <?= Csrf::field() ?>
+
+                <button type="submit" class="btn btn-outline-primary">
+                    Generate Ulang Link Upload
+                </button>
+            </form>
+        </div>
+    </div>
+<?php endif; ?>
+
 <div class="row mb-3">
     <div class="col-md-4 mb-2">
         <div class="card">
