@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Database;
+use App\Core\RegionScope;
 use PDO;
 
 class User
@@ -236,5 +237,102 @@ class User
         ");
 
         return $stmt->execute([$id]);
+    }
+
+    public static function allScoped(): array
+    {
+        $pdo = Database::connection();
+
+        [$whereSql, $params] = RegionScope::whereSqlForTarget('u', null);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                u.*,
+
+                r.name AS role_name,
+                r.label AS role_label,
+
+                o.name AS organization_name,
+                o.type AS organization_type,
+
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
+
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role_id
+            LEFT JOIN organizations o ON o.id = u.organization_id
+            LEFT JOIN regions rg ON rg.id = u.region_id
+
+            {$whereSql}
+
+            ORDER BY
+                u.created_at DESC,
+                u.name ASC
+        ");
+
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function findScoped(int $id): ?array
+    {
+        $pdo = Database::connection();
+
+        [$regionSql, $regionParams] = RegionScope::andSqlForTarget('u', null);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                u.*,
+
+                r.name AS role_name,
+                r.label AS role_label,
+
+                o.name AS organization_name,
+                o.type AS organization_type,
+
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
+
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role_id
+            LEFT JOIN organizations o ON o.id = u.organization_id
+            LEFT JOIN regions rg ON rg.id = u.region_id
+
+            WHERE u.id = ?
+            {$regionSql}
+
+            LIMIT 1
+        ");
+
+        $stmt->execute(array_merge([$id], $regionParams));
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    public static function findRaw(int $id): ?array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare("
+            SELECT
+                u.*,
+                r.name AS role_name,
+                r.label AS role_label
+            FROM users u
+            LEFT JOIN roles r ON r.id = u.role_id
+            WHERE u.id = ?
+            LIMIT 1
+        ");
+
+        $stmt->execute([$id]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
     }
 }

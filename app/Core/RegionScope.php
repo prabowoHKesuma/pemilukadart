@@ -73,10 +73,10 @@ class RegionScope
         }
 
         if (!$regionId) {
-            return false;
+        return self::isUnrestricted();
         }
 
-        return in_array($regionId, self::allowedRegionIds(), true);
+        return self::canAccessRegionInTarget((int) $regionId, null);
     }
 
     public static function idsForTargetRegion(?int $targetRegionId): array

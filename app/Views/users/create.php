@@ -110,12 +110,11 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
 
                         <?php foreach ($regions as $region): ?>
                             <option value="<?= htmlspecialchars((string) $region['id']) ?>">
-                                [<?= htmlspecialchars($region['organization_name']) ?>]
-                                <?= htmlspecialchars(strtoupper($region['level'])) ?>
-                                -
-                                <?= htmlspecialchars($region['code']) ?>
-                                -
-                                <?= htmlspecialchars($region['name']) ?>
+                                <?= htmlspecialchars($region['code']) ?> - <?= htmlspecialchars($region['name']) ?>
+                                / <?= htmlspecialchars(strtoupper((string) $region['level'])) ?>
+                                <?php if (!empty($region['organization_name'])): ?>
+                                    (<?= htmlspecialchars($region['organization_name']) ?>)
+                                <?php endif; ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
