@@ -265,12 +265,21 @@ class RemoteVerification
             )
         ");
 
-        return $stmt->execute([
+        /* return $stmt->execute([
+            'election_id' => $data['election_id'],
+            'voter_id' => $data['voter_id'],
+            'verification_code' => $data['verification_code'],
+            'expires_at' => $data['expires_at'],
+        ]); */
+
+            $stmt->execute([
             'election_id' => $data['election_id'],
             'voter_id' => $data['voter_id'],
             'verification_code' => $data['verification_code'],
             'expires_at' => $data['expires_at'],
         ]);
+
+        return (int) $pdo->lastInsertId();
     }
 
     public static function updatePhotos(int $id, string $ktpPath, string $selfiePath): bool
@@ -346,6 +355,244 @@ class RemoteVerification
             'id' => $id,
             'user_id' => $userId,
             'reject_reason' => $reason,
+        ]);
+    }
+
+    public static function findBasic(int $id): ?array
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare("
+            SELECT
+                id,
+                election_id,
+                voter_id,
+                status,
+                ktp_photo_path,
+                selfie_photo_path
+            FROM remote_verifications
+            WHERE id = ?
+            LIMIT 1
+        ");
+
+        $stmt->execute([$id]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    public static function findDetailScoped(int $id, array $election): ?array
+    {
+        $pdo = Database::connection();
+
+        $targetRegionId = !empty($election['region_id']) ? (int) $election['region_id'] : null;
+
+        [$regionSql, $regionParams] = RegionScope::andSqlForTarget('v', $targetRegionId);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                rv.*,
+
+                v.voter_code,
+                v.name AS voter_name,
+                v.address,
+                v.phone,
+                v.rt,
+                v.rw,
+                v.is_active,
+                v.organization_id AS voter_organization_id,
+                v.region_id AS voter_region_id,
+
+                ev.allowed_channel,
+                ev.has_voted,
+                ev.voted_at,
+
+                r1.name AS verifier_1_name,
+                r2.name AS verifier_2_name,
+
+                rg.code AS region_code,
+                rg.name AS region_name,
+                rg.level AS region_level
+
+            FROM remote_verifications rv
+
+            JOIN voters v
+                ON v.id = rv.voter_id
+
+            JOIN election_voters ev
+                ON ev.election_id = rv.election_id
+            AND ev.voter_id = rv.voter_id
+
+            LEFT JOIN users r1
+                ON r1.id = rv.verified_by_1
+
+            LEFT JOIN users r2
+                ON r2.id = rv.verified_by_2
+
+            LEFT JOIN regions rg
+                ON rg.id = v.region_id
+
+            WHERE rv.id = ?
+            AND rv.election_id = ?
+            {$regionSql}
+
+            LIMIT 1
+        ");
+
+        $stmt->execute(array_merge([
+            $id,
+            (int) $election['id'],
+        ], $regionParams));
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    public static function allByElectionScoped(array $election): array
+    {
+        $pdo = Database::connection();
+
+        $targetRegionId = !empty($election['region_id']) ? (int) $election['region_id'] : null;
+
+        [$regionSql, $regionParams] = RegionScope::andSqlForTarget('v', $targetRegionId);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                rv.*,
+
+                v.voter_code,
+                v.name AS voter_name,
+                v.phone,
+                v.rt,
+                v.rw,
+                v.region_id AS voter_region_id,
+
+                ev.allowed_channel,
+                ev.has_voted,
+
+                r1.name AS verifier_1_name,
+                r2.name AS verifier_2_name
+
+            FROM remote_verifications rv
+
+            JOIN voters v
+                ON v.id = rv.voter_id
+
+            JOIN election_voters ev
+                ON ev.election_id = rv.election_id
+            AND ev.voter_id = rv.voter_id
+
+            LEFT JOIN users r1
+                ON r1.id = rv.verified_by_1
+
+            LEFT JOIN users r2
+                ON r2.id = rv.verified_by_2
+
+            WHERE rv.election_id = ?
+            {$regionSql}
+
+            ORDER BY rv.created_at DESC
+        ");
+
+        $stmt->execute(array_merge([
+            (int) $election['id'],
+        ], $regionParams));
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function generateUploadToken(int $id, int $expiresHours = 24): string
+    {
+        $pdo = Database::connection();
+
+        $plainToken = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $plainToken);
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+' . $expiresHours . ' hours'));
+
+        $stmt = $pdo->prepare("
+            UPDATE remote_verifications
+            SET
+                upload_token_hash = ?,
+                upload_token_expires_at = ?,
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+
+        $stmt->execute([
+            $tokenHash,
+            $expiresAt,
+            $id,
+        ]);
+
+        return $plainToken;
+    }
+
+    public static function findByUploadToken(string $plainToken): ?array
+    {
+        $pdo = Database::connection();
+
+        $tokenHash = hash('sha256', $plainToken);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                rv.*,
+
+                e.title AS election_title,
+                e.status AS election_status,
+
+                v.voter_code,
+                v.name AS voter_name,
+                v.phone,
+                v.rt,
+                v.rw,
+                v.is_active,
+
+                ev.allowed_channel,
+                ev.has_voted
+
+            FROM remote_verifications rv
+
+            JOIN elections e
+                ON e.id = rv.election_id
+
+            JOIN voters v
+                ON v.id = rv.voter_id
+
+            JOIN election_voters ev
+                ON ev.election_id = rv.election_id
+            AND ev.voter_id = rv.voter_id
+
+            WHERE rv.upload_token_hash = ?
+            LIMIT 1
+        ");
+
+        $stmt->execute([$tokenHash]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    public static function markPublicUploaded(int $id, string $ktpPath, string $selfiePath): bool
+    {
+        $pdo = Database::connection();
+
+        $stmt = $pdo->prepare("
+            UPDATE remote_verifications
+            SET
+                ktp_photo_path = ?,
+                selfie_photo_path = ?,
+                upload_uploaded_at = NOW(),
+                updated_at = NOW()
+            WHERE id = ?
+        ");
+
+        return $stmt->execute([
+            $ktpPath,
+            $selfiePath,
+            $id,
         ]);
     }
 }

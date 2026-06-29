@@ -7,6 +7,7 @@ use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Redirect;
 use App\Core\Session;
+use App\Core\Env;
 use App\Models\AuditLog;
 use App\Models\Election;
 use App\Models\RemoteVerification;
@@ -25,18 +26,61 @@ class RemoteVerificationController extends Controller
         ]);
     }
 
-    public function election(string $electionId): void
+    private function electionOr404(string|int $electionId): array
     {
-        Auth::requirePermission('manage_remote_verification');
-
         $election = Election::find((int) $electionId);
 
         if (!$election) {
             http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
+            die('Data pemilihan tidak ditemukan atau berada di luar scope wilayah Anda.');
         }
 
-        $requests = RemoteVerification::allByElection((int) $electionId);
+        return $election;
+    }
+
+    private function requestOr404(array $election, string|int $requestId): array
+    {
+        $request = RemoteVerification::findDetailScoped((int) $requestId, $election);
+
+        if (!$request) {
+            http_response_code(404);
+            die('Request verifikasi remote tidak ditemukan atau berada di luar scope wilayah Anda.');
+        }
+
+        return $request;
+    }
+
+    private function ensureRequestCanProcess(array $request): void
+    {
+        if (($request['status'] ?? '') !== 'pending') {
+            Session::flash('error', 'Request verifikasi ini sudah tidak bisa diproses.');
+            Redirect::to('/elections/' . $request['election_id'] . '/remote-verifications/' . $request['id']);
+        }
+    }
+
+    private function ensureRequestHasPhotos(array $request): void
+    {
+        if (empty($request['ktp_photo_path']) || empty($request['selfie_photo_path'])) {
+            Session::flash('error', 'Foto KTP dan selfie wajib diupload sebelum approval.');
+            Redirect::to('/elections/' . $request['election_id'] . '/remote-verifications/' . $request['id']);
+        }
+    }
+
+    public function election(string $electionId): void
+    {
+        Auth::requirePermission('manage_remote_verification');
+
+        // $election = Election::find((int) $electionId);
+
+        $election = $this->electionOr404($electionId);
+
+        /* if (!$election) {
+            http_response_code(404);
+            die('Data pemilihan tidak ditemukan.');
+        } */
+
+        //$requests = RemoteVerification::allByElection((int) $electionId);
+        $requests = RemoteVerification::allByElectionScoped($election);
 
         $isLocked = !in_array($election['status'] ?? '', ['draft', 'open'], true);
         
@@ -162,7 +206,7 @@ class RemoteVerificationController extends Controller
         $verificationCode = $this->generateVerificationCode((int) $electionId);
         $expiresAt = date('Y-m-d H:i:s', strtotime('+2 days'));
 
-        RemoteVerification::create([
+        /* RemoteVerification::create([
             'election_id' => (int) $electionId,
             'voter_id' => (int) $electionVoter['voter_id'],
             'verification_code' => $verificationCode,
@@ -175,26 +219,43 @@ class RemoteVerificationController extends Controller
         );
 
         Session::flash('success', 'Request verifikasi remote berhasil dibuat. Berikan kode ke pemilih.');
-        Redirect::to('/elections/' . $electionId . '/remote-verifications');
+        Redirect::to('/elections/' . $electionId . '/remote-verifications'); */
+
+        $requestId = RemoteVerification::create([
+            'election_id' => (int) $electionId,
+            'voter_id' => (int) $electionVoter['voter_id'],
+            'verification_code' => $verificationCode,
+            'expires_at' => $expiresAt,
+        ]);
+
+        $plainUploadToken = RemoteVerification::generateUploadToken((int) $requestId, 24);
+
+        $uploadLink = rtrim(Env::get('APP_URL'), '/') . '/remote-verification-upload/' . $plainUploadToken;
+
+        Session::flash('remote_verification_upload_link', $uploadLink);
+
+        AuditLog::record(
+            'remote_verification_create',
+            'Membuat request verifikasi remote untuk election ID ' . $electionId . ' dengan kode ' . $verificationCode,
+            null,
+            [
+                'election_id' => (int) $electionId,
+                'organization_id' => $election['organization_id'] ?? null,
+                'region_id' => $election['region_id'] ?? null,
+            ]
+        );
+
+        Session::flash('success', 'Request verifikasi remote berhasil dibuat. Copy link upload dan kirim ke pemilih.');
+
+        Redirect::to('/elections/' . $electionId . '/remote-verifications/' . $requestId);
     }
 
     public function show(string $electionId, string $id): void
     {
         Auth::requirePermission('manage_remote_verification');
 
-        $election = Election::find((int) $electionId);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
-
-        $request = RemoteVerification::find((int) $id);
-
-        if (!$request || (int) $request['election_id'] !== (int) $electionId) {
-            http_response_code(404);
-            die('Request verifikasi remote tidak ditemukan.');
-        }
+        $election = $this->electionOr404($electionId);
+        $request = $this->requestOr404($election, $id);
 
         $preparedRequest = $this->prepareRequestDetail($request, $election);
 
@@ -202,6 +263,7 @@ class RemoteVerificationController extends Controller
             'title' => 'Detail Verifikasi Remote',
             'election' => $election,
             'request' => $preparedRequest,
+            'uploadLink' => Session::flash('remote_verification_upload_link'),
         ]);
     }
 
@@ -220,7 +282,7 @@ class RemoteVerificationController extends Controller
 
         $request['has_photos'] = $hasPhotos;
         $request['can_process'] = $canProcess;
-        $request['can_upload_photos'] = $canProcess;
+        $request['can_upload_photos'] = $canProcess && !$hasPhotos;
         $request['can_approve'] = $canProcess && $hasPhotos;
         $request['can_reject'] = $canProcess;
 
@@ -285,12 +347,10 @@ class RemoteVerificationController extends Controller
         Auth::requirePermission('manage_remote_verification');
         Csrf::verify();
 
-        $request = RemoteVerification::find((int) $id);
+        $election = $this->electionOr404($electionId);
+        $request = $this->requestOr404($election, $id);
 
-        if (!$request || (int) $request['election_id'] !== (int) $electionId) {
-            http_response_code(404);
-            die('Request verifikasi remote tidak ditemukan.');
-        }
+        $this->ensureRequestCanProcess($request);
 
         if ($request['status'] !== 'pending') {
             Session::flash('error', 'Foto hanya bisa diupload saat status masih pending.');
@@ -317,7 +377,13 @@ class RemoteVerificationController extends Controller
 
         AuditLog::record(
             'remote_verification_upload',
-            'Upload foto KTP dan selfie untuk remote verification ID ' . $id . ' pada election ID ' . $electionId
+            'Upload foto KTP dan selfie untuk remote verification ID ' . $id . ' pada election ID ' . $electionId,
+            null,
+            [
+                'election_id' => (int) $electionId,
+                'organization_id' => $election['organization_id'] ?? null,
+                'region_id' => $request['voter_region_id'] ?? ($election['region_id'] ?? null),
+            ]
         );
 
         Session::flash('success', 'Foto verifikasi berhasil diupload.');
@@ -329,12 +395,11 @@ class RemoteVerificationController extends Controller
         Auth::requirePermission('manage_remote_verification');
         Csrf::verify();
 
-        $request = RemoteVerification::find((int) $id);
+        $election = $this->electionOr404($electionId);
+        $request = $this->requestOr404($election, $id);
 
-        if (!$request || (int) $request['election_id'] !== (int) $electionId) {
-            http_response_code(404);
-            die('Request verifikasi remote tidak ditemukan.');
-        }
+        $this->ensureRequestCanProcess($request);
+        $this->ensureRequestHasPhotos($request);
 
         if ($request['status'] !== 'pending') {
             Session::flash('error', 'Request ini sudah tidak berstatus pending.');
@@ -358,7 +423,13 @@ class RemoteVerificationController extends Controller
 
             AuditLog::record(
                 'remote_verification_approve_1',
-                'Approval pertama remote verification ID ' . $id . ' pada election ID ' . $electionId
+                'Approval pertama remote verification ID ' . $id . ' pada election ID ' . $electionId,
+                null,
+                [
+                    'election_id' => (int) $electionId,
+                    'organization_id' => $election['organization_id'] ?? null,
+                    'region_id' => $request['voter_region_id'] ?? ($election['region_id'] ?? null),
+                ]
             );
 
             Session::flash('success', 'Approval pertama berhasil. Menunggu approval kedua dari user berbeda.');
@@ -370,14 +441,25 @@ class RemoteVerificationController extends Controller
             Redirect::to('/elections/' . $electionId . '/remote-verifications/' . $id);
         }
 
-        RemoteVerification::approveSecond((int) $id, (int) $userId);
+        if (empty($request['verified_by_2'])) {
+            RemoteVerification::approveSecond((int) $id, (int) $userId);
 
-        AuditLog::record(
-            'remote_verification_approve_2',
-            'Approval kedua remote verification ID ' . $id . ' pada election ID ' . $electionId . '. Status menjadi approved.'
-        );
+            AuditLog::record(
+                'remote_verification_approve_2',
+                'Approval kedua remote verification ID ' . $id . '. Status menjadi APPROVED.',
+                null,
+                [
+                    'election_id' => (int) $electionId,
+                    'organization_id' => $election['organization_id'] ?? null,
+                    'region_id' => $request['voter_region_id'] ?? ($election['region_id'] ?? null),
+                ]
+            );
 
-        Session::flash('success', 'Approval kedua berhasil. Verifikasi remote disetujui.');
+            Session::flash('success', 'Approval kedua berhasil. Verifikasi remote sudah APPROVED.');
+            Redirect::to('/elections/' . $electionId . '/remote-verifications/' . $id);
+        }
+
+        Session::flash('error', 'Request ini sudah lengkap approval-nya.');
         Redirect::to('/elections/' . $electionId . '/remote-verifications/' . $id);
     }
 
@@ -386,12 +468,10 @@ class RemoteVerificationController extends Controller
         Auth::requirePermission('manage_remote_verification');
         Csrf::verify();
 
-        $request = RemoteVerification::find((int) $id);
+        $election = $this->electionOr404($electionId);
+        $request = $this->requestOr404($election, $id);
 
-        if (!$request || (int) $request['election_id'] !== (int) $electionId) {
-            http_response_code(404);
-            die('Request verifikasi remote tidak ditemukan.');
-        }
+        $this->ensureRequestCanProcess($request);
 
         if ($request['status'] !== 'pending') {
             Session::flash('error', 'Request ini sudah tidak berstatus pending.');
@@ -409,7 +489,13 @@ class RemoteVerificationController extends Controller
 
         AuditLog::record(
             'remote_verification_reject',
-            'Menolak remote verification ID ' . $id . ' pada election ID ' . $electionId . '. Alasan: ' . $reason
+            'Menolak remote verification ID ' . $id . ' pada election ID ' . $electionId . '. Alasan: ' . $reason,
+            null,
+            [
+                'election_id' => (int) $electionId,
+                'organization_id' => $election['organization_id'] ?? null,
+                'region_id' => $request['voter_region_id'] ?? ($election['region_id'] ?? null),
+            ]
         );
 
         Session::flash('success', 'Verifikasi remote berhasil ditolak.');
@@ -417,46 +503,88 @@ class RemoteVerificationController extends Controller
     }
 
     public function file(string $id, string $type): void
-    {
-        Auth::requirePermission('manage_remote_verification');
+{
+    Auth::requirePermission('manage_remote_verification');
 
-        $request = RemoteVerification::find((int) $id);
-
-        if (!$request) {
-            http_response_code(404);
-            die('File tidak ditemukan.');
-        }
-
-        if (!in_array($type, ['ktp', 'selfie'], true)) {
-            http_response_code(404);
-            die('Tipe file tidak valid.');
-        }
-
-        $path = $type === 'ktp'
-            ? $request['ktp_photo_path']
-            : $request['selfie_photo_path'];
-
-        if (!$path) {
-            http_response_code(404);
-            die('File belum diupload.');
-        }
-
-        $fullPath = dirname(__DIR__, 2) . '/' . ltrim($path, '/');
-
-        if (!file_exists($fullPath) || !is_file($fullPath)) {
-            http_response_code(404);
-            die('File fisik tidak ditemukan.');
-        }
-
-        $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
-
-        header('Content-Type: ' . $mime);
-        header('Content-Length: ' . filesize($fullPath));
-        header('X-Content-Type-Options: nosniff');
-
-        readfile($fullPath);
-        exit;
+    if (!in_array($type, ['ktp', 'selfie'], true)) {
+        http_response_code(404);
+        die('File tidak ditemukan.');
     }
+
+    $basic = RemoteVerification::findBasic((int) $id);
+
+    if (!$basic) {
+        http_response_code(404);
+        die('File tidak ditemukan.');
+    }
+
+    $election = Election::find((int) $basic['election_id']);
+
+    if (!$election) {
+        http_response_code(404);
+        die('File tidak ditemukan atau berada di luar scope wilayah Anda.');
+    }
+
+    $request = RemoteVerification::findDetailScoped((int) $id, $election);
+
+    if (!$request) {
+        http_response_code(404);
+        die('File tidak ditemukan atau berada di luar scope wilayah Anda.');
+    }
+
+    $relativePath = $type === 'ktp'
+        ? ($request['ktp_photo_path'] ?? null)
+        : ($request['selfie_photo_path'] ?? null);
+
+    if (!$relativePath) {
+        http_response_code(404);
+        die('File belum tersedia.');
+    }
+
+    // Path di DB bisa diawali "/" atau tidak.
+    $relativePath = ltrim((string) $relativePath, '/\\');
+
+    // Base folder private upload Anda.
+    $baseDir = realpath(dirname(__DIR__, 2) . '/storage/private/verifications');
+
+    if (!$baseDir) {
+        http_response_code(404);
+        die('Folder storage tidak ditemukan.');
+    }
+
+    $filePath = realpath(dirname(__DIR__, 2) . '/' . $relativePath);
+
+    if (!$filePath) {
+        http_response_code(404);
+        die('File fisik tidak ditemukan.');
+    }
+
+    // Security: pastikan file benar-benar masih di dalam storage/private/verifications
+    if (!str_starts_with($filePath, $baseDir)) {
+        http_response_code(403);
+        die('Akses file ditolak.');
+    }
+
+    if (!is_file($filePath)) {
+        http_response_code(404);
+        die('File tidak ditemukan.');
+    }
+
+    $mime = mime_content_type($filePath) ?: 'application/octet-stream';
+
+    if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+        http_response_code(403);
+        die('Tipe file tidak valid.');
+    }
+
+    header('Content-Type: ' . $mime);
+    header('Content-Length: ' . filesize($filePath));
+    header('X-Content-Type-Options: nosniff');
+    header('Cache-Control: private, max-age=3600');
+
+    readfile($filePath);
+    exit;
+}
 
     private function generateVerificationCode(int $electionId): string
     {
