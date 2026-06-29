@@ -7,6 +7,7 @@ use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Redirect;
 use App\Core\Session;
+use App\Core\RegionScope;
 use App\Models\AuditLog;
 use App\Models\Role;
 use App\Models\User;
@@ -19,12 +20,108 @@ class UserController extends Controller
     {
         Auth::requirePermission('manage_users');
 
-        $users = User::all();
+        $users = User::allScoped();
 
         $this->view('users/index', [
             'title' => 'User Management',
             'users' => $users,
         ]);
+    }
+
+    private function isSuperadmin(): bool
+    {
+        return Auth::role() === 'superadmin';
+    }
+
+    private function userOr404(string|int $id): array
+    {
+        $user = User::findScoped((int) $id);
+
+        if (!$user) {
+            http_response_code(404);
+            die('User tidak ditemukan atau berada di luar scope wilayah Anda.');
+        }
+
+        return $user;
+    }
+
+    private function regionOrReject(?int $regionId, string $redirectUrl): ?array
+    {
+        if (!$regionId) {
+            if ($this->isSuperadmin()) {
+                return null;
+            }
+
+            Session::flash('error', 'Wilayah user wajib dipilih.');
+            Redirect::to($redirectUrl);
+        }
+
+        if (!RegionScope::canAccessRegion((int) $regionId)) {
+            Session::flash('error', 'Wilayah yang dipilih berada di luar scope Anda.');
+            Redirect::to($redirectUrl);
+        }
+
+        $region = Region::find((int) $regionId);
+
+        if (!$region) {
+            Session::flash('error', 'Wilayah tidak ditemukan.');
+            Redirect::to($redirectUrl);
+        }
+
+        return $region;
+    }
+
+    private function normalizeUserPayload(string $redirectUrl): array
+    {
+        $name = trim($_POST['name'] ?? '');
+        $username = strtolower(trim($_POST['username'] ?? ''));
+        $roleId = (int) ($_POST['role_id'] ?? 0);
+        $regionId = !empty($_POST['region_id']) ? (int) $_POST['region_id'] : null;
+        $organizationId = !empty($_POST['organization_id']) ? (int) $_POST['organization_id'] : null;
+        $isActive = isset($_POST['is_active']) ? 1 : 0;
+
+        if ($name === '') {
+            Session::flash('error', 'Nama user wajib diisi.');
+            Redirect::to($redirectUrl);
+        }
+
+        if ($username === '') {
+            Session::flash('error', 'Username wajib diisi.');
+            Redirect::to($redirectUrl);
+        }
+
+        if ($roleId <= 0 || !Role::canAssignRoleId($roleId)) {
+            Session::flash('error', 'Role tidak valid atau tidak boleh Anda assign.');
+            Redirect::to($redirectUrl);
+        }
+
+        $region = $this->regionOrReject($regionId, $redirectUrl);
+
+        if (!$this->isSuperadmin()) {
+            $currentUser = Auth::user();
+
+            $organizationId = !empty($currentUser['organization_id'])
+                ? (int) $currentUser['organization_id']
+                : ($region['organization_id'] ?? null);
+        }
+
+        if ($region && !empty($region['organization_id'])) {
+            $organizationId = (int) $region['organization_id'];
+        }
+
+        if (!$organizationId) {
+            Session::flash('error', 'Organization user tidak valid.');
+            Redirect::to($redirectUrl);
+        }
+
+        return [
+            'name' => $name,
+            'username' => $username,
+            'role_id' => $roleId,
+            'organization_id' => $organizationId,
+            'region_id' => $regionId,
+            'is_active' => $isActive,
+        ];
     }
 
     public function create(): void
@@ -37,9 +134,10 @@ class UserController extends Controller
 
         $this->view('users/create', [
             'title' => 'Tambah User',
-            'roles' => $roles,
-            'organizations' => $organizations,
-            'regions' => $regions,
+            'roles' => Role::manageableOptions(),
+            'regions' => Region::optionsScoped(),
+            'organizations' => $this->isSuperadmin() ? Organization::options() : [],
+            'isSuperadmin' => $this->isSuperadmin(),
         ]);
     }
 
@@ -48,14 +146,21 @@ class UserController extends Controller
         Auth::requirePermission('manage_users');
         Csrf::verify();
 
+        $data = $this->normalizeUserPayload('/users/create');
+
         $name = trim($_POST['name'] ?? '');
         $username = strtolower(trim($_POST['username'] ?? ''));
-        $password = $_POST['password'] ?? '';
+        $password = trim($_POST['password'] ?? '');
         $passwordConfirmation = $_POST['password_confirmation'] ?? '';
         $roleId = (int) ($_POST['role_id'] ?? 0);
         $organizationId = !empty($_POST['organization_id']) ? (int) $_POST['organization_id'] : null;
         $regionId = !empty($_POST['region_id']) ? (int) $_POST['region_id'] : null;
         $isActive = isset($_POST['is_active']) ? 1 : 0;
+
+        if ($password === '') {
+            Session::flash('error', 'Password wajib diisi.');
+            Redirect::to('/users/create');
+        }
 
         if ($name === '') {
             Session::flash('error', 'Nama user wajib diisi.');
@@ -130,7 +235,12 @@ class UserController extends Controller
 
         AuditLog::record(
             'user_create',
-            'Membuat user baru: ' . $username . ' dengan role ' . $role['name']
+            'Membuat user baru: ' . $username . ' dengan role ' . $role['name'],
+            null,
+            [
+                'organization_id' => $data['organization_id'],
+                'region_id' => $data['region_id'],
+            ]
         );
 
         Session::flash('success', 'User berhasil ditambahkan.');
@@ -141,23 +251,20 @@ class UserController extends Controller
     {
         Auth::requirePermission('manage_users');
 
-        $user = User::find((int) $id);
+        $user = $this->userOr404($id);
 
-        if (!$user) {
-            http_response_code(404);
-            die('User tidak ditemukan.');
+        if (($user['role_name'] ?? '') === 'superadmin' && !$this->isSuperadmin()) {
+            http_response_code(403);
+            die('Anda tidak boleh mengelola user superadmin.');
         }
-
-        $roles = Role::options();
-        $organizations = Organization::options();
-        $regions = Region::options();
 
         $this->view('users/edit', [
             'title' => 'Edit User',
-            'userData' => $user,
-            'roles' => $roles,
-            'organizations' => $organizations,
-            'regions' => $regions,
+            'user' => $user,
+            'roles' => Role::manageableOptions(),
+            'regions' => Region::optionsScoped(),
+            'organizations' => $this->isSuperadmin() ? Organization::options() : [],
+            'isSuperadmin' => $this->isSuperadmin(),
         ]);
     }
 
@@ -166,124 +273,38 @@ class UserController extends Controller
         Auth::requirePermission('manage_users');
         Csrf::verify();
 
-        $user = User::find((int) $id);
+        $user = $this->userOr404($id);
 
-        if (!$user) {
-            http_response_code(404);
-            die('User tidak ditemukan.');
+        if (($user['role_name'] ?? '') === 'superadmin' && !$this->isSuperadmin()) {
+            http_response_code(403);
+            die('Anda tidak boleh mengubah user superadmin.');
         }
 
-        $name = trim($_POST['name'] ?? '');
-        $username = strtolower(trim($_POST['username'] ?? ''));
-        $roleId = (int) ($_POST['role_id'] ?? 0);
-        $organizationId = !empty($_POST['organization_id']) ? (int) $_POST['organization_id'] : null;
-        $regionId = !empty($_POST['region_id']) ? (int) $_POST['region_id'] : null;
-        $isActive = isset($_POST['is_active']) ? 1 : 0;
+        $data = $this->normalizeUserPayload('/users/' . $id . '/edit');
 
-        if ($name === '') {
-            Session::flash('error', 'Nama user wajib diisi.');
-            Redirect::to('/users/' . $id . '/edit');
-        }
-
-        if ($username === '') {
-            Session::flash('error', 'Username wajib diisi.');
-            Redirect::to('/users/' . $id . '/edit');
-        }
-
-        if (!preg_match('/^[a-z0-9_.-]+$/', $username)) {
-            Session::flash('error', 'Username hanya boleh huruf kecil, angka, titik, underscore, dan strip.');
-            Redirect::to('/users/' . $id . '/edit');
-        }
-
-        if (User::usernameExists($username, (int) $id)) {
+        if (User::usernameExists($data['username'], (int) $id)) {
             Session::flash('error', 'Username sudah digunakan.');
             Redirect::to('/users/' . $id . '/edit');
         }
 
         if ((int) $id === (int) Auth::id()) {
-            if ($isActive !== 1) {
-                Session::flash('error', 'Tidak boleh menonaktifkan akun yang sedang dipakai.');
-                Redirect::to('/users/' . $id . '/edit');
-            }
-
-            if ($roleId !== (int) $user['role_id']) {
-                Session::flash('error', 'Tidak boleh mengubah role akun yang sedang dipakai.');
-                Redirect::to('/users/' . $id . '/edit');
-            }
-
-            $organizationId = $user['organization_id'] ? (int) $user['organization_id'] : null;
-            $regionId = $user['region_id'] ? (int) $user['region_id'] : null;
-
+            unset($data['role_id']);
+            unset($data['is_active']);
         }
 
-        $role = Role::find($roleId);
-
-        if (!$role) {
-            Session::flash('error', 'Role tidak valid.');
-            Redirect::to('/users/' . $id . '/edit');
-        }
-
-        if ($regionId) {
-            $region = Region::find($regionId);
-
-            if (!$region) {
-                Session::flash('error', 'Wilayah tidak valid.');
-                Redirect::to('/users/' . $id . '/edit');
-            }
-
-            if ($organizationId && (int) $region['organization_id'] !== (int) $organizationId) {
-                Session::flash('error', 'Wilayah tidak sesuai dengan organization.');
-                Redirect::to('/users/' . $id . '/edit');
-            }
-
-            if (!$organizationId) {
-                $organizationId = (int) $region['organization_id'];
-            }
-        }
-
-        if ($organizationId && !Organization::find($organizationId)) {
-            Session::flash('error', 'Organization tidak valid.');
-            Redirect::to('/users/' . $id . '/edit');
-        }
-
-        User::update((int) $id, [
-            'name' => $name,
-            'username' => $username,
-            'role' => $role['name'],
-            'role_id' => $roleId,
-            'organization_id' => $organizationId,
-            'region_id' => $regionId,
-            'is_active' => $isActive,
-        ]);
-
-        $newPassword = $_POST['new_password'] ?? '';
-        $newPasswordConfirmation = $_POST['new_password_confirmation'] ?? '';
-
-        if ($newPassword !== '') {
-            if (strlen($newPassword) < 8) {
-                Session::flash('error', 'Password baru minimal 8 karakter.');
-                Redirect::to('/users/' . $id . '/edit');
-            }
-
-            if ($newPassword !== $newPasswordConfirmation) {
-                Session::flash('error', 'Konfirmasi password baru tidak sama.');
-                Redirect::to('/users/' . $id . '/edit');
-            }
-
-            User::updatePassword((int) $id, password_hash($newPassword, PASSWORD_DEFAULT));
-
-            AuditLog::record(
-                'user_password_reset',
-                'Reset password user ID ' . $id . ': ' . $username
-            );
-        }
+        User::update((int) $id, $data);
 
         AuditLog::record(
             'user_update',
-            'Memperbarui user ID ' . $id . ': ' . $username . ' dengan role ' . $role['name']
+            'Memperbarui user ID ' . $id . ': ' . $data['username'],
+            null,
+            [
+                'organization_id' => $data['organization_id'],
+                'region_id' => $data['region_id'],
+            ]
         );
 
-        Session::flash('success', 'User berhasil diperbarui. Jika role/permission berubah, user tersebut harus login ulang.');
+        Session::flash('success', 'User berhasil diperbarui.');
         Redirect::to('/users');
     }
 
@@ -292,23 +313,28 @@ class UserController extends Controller
         Auth::requirePermission('manage_users');
         Csrf::verify();
 
-        $user = User::find((int) $id);
-
-        if (!$user) {
-            http_response_code(404);
-            die('User tidak ditemukan.');
-        }
+        $user = $this->userOr404($id);
 
         if ((int) $id === (int) Auth::id()) {
-            Session::flash('error', 'Tidak boleh menghapus akun yang sedang dipakai.');
+            Session::flash('error', 'Anda tidak bisa menghapus akun sendiri.');
             Redirect::to('/users');
+        }
+
+        if (($user['role_name'] ?? '') === 'superadmin' && !$this->isSuperadmin()) {
+            http_response_code(403);
+            die('Anda tidak boleh menghapus user superadmin.');
         }
 
         User::delete((int) $id);
 
         AuditLog::record(
             'user_delete',
-            'Menghapus user ID ' . $id . ': ' . $user['username']
+            'Menghapus user ID ' . $id . ': ' . ($user['username'] ?? '-'),
+            null,
+            [
+                'organization_id' => $user['organization_id'] ?? null,
+                'region_id' => $user['region_id'] ?? null,
+            ]
         );
 
         Session::flash('success', 'User berhasil dihapus.');

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Database;
+use App\Core\Auth;
 use PDO;
 
 class Role
@@ -244,5 +245,32 @@ class Role
         ");
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function manageableOptions(): array
+    {
+        $roles = self::options();
+
+        if (Auth::role() === 'superadmin') {
+            return $roles;
+        }
+
+        return array_values(array_filter($roles, function (array $role): bool {
+            return !in_array($role['name'], [
+                'superadmin',
+                'administrator',
+            ], true);
+        }));
+    }
+
+    public static function canAssignRoleId(int $roleId): bool
+    {
+        foreach (self::manageableOptions() as $role) {
+            if ((int) $role['id'] === $roleId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

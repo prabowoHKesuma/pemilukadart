@@ -5,7 +5,7 @@ use App\Core\Csrf;
 use App\Core\Env;
 
 $appUrl = rtrim(Env::get('APP_URL'), '/');
-$isSelf = (int) $userData['id'] === (int) Auth::id();
+$isSelf = (int) $user['id'] === (int) Auth::id();
 
 ?>
 
@@ -13,7 +13,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
     <div>
         <h1 class="h3 mb-0">Edit User</h1>
         <div class="text-muted small">
-            User: <strong><?= htmlspecialchars($userData['username']) ?></strong>
+            User: <strong><?= htmlspecialchars($user['username']) ?></strong>
         </div>
     </div>
 
@@ -30,7 +30,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
 
 <div class="card">
     <div class="card-body">
-        <form method="post" action="<?= htmlspecialchars($appUrl) ?>/users/<?= $userData['id'] ?>/update">
+        <form method="post" action="<?= htmlspecialchars($appUrl) ?>/users/<?= $user['id'] ?>/update">
             <?= Csrf::field() ?>
 
             <div class="row">
@@ -40,7 +40,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
                         type="text" 
                         name="name" 
                         class="form-control"
-                        value="<?= htmlspecialchars($userData['name']) ?>"
+                        value="<?= htmlspecialchars($user['name']) ?>"
                         required
                         autofocus
                     >
@@ -52,7 +52,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
                         type="text" 
                         name="username" 
                         class="form-control"
-                        value="<?= htmlspecialchars($userData['username']) ?>"
+                        value="<?= htmlspecialchars($user['username']) ?>"
                         required
                     >
                 </div>
@@ -66,7 +66,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
                     <?php foreach ($roles as $role): ?>
                         <option 
                             value="<?= htmlspecialchars((string) $role['id']) ?>"
-                            <?= (int) $userData['role_id'] === (int) $role['id'] ? 'selected' : '' ?>
+                            <?= (int) $user['role_id'] === (int) $role['id'] ? 'selected' : '' ?>
                         >
                             <?= htmlspecialchars($role['label']) ?> (<?= htmlspecialchars($role['name']) ?>)
                         </option>
@@ -74,7 +74,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
                 </select>
 
                 <?php if ($isSelf): ?>
-                    <input type="hidden" name="role_id" value="<?= htmlspecialchars((string) $userData['role_id']) ?>">
+                    <input type="hidden" name="role_id" value="<?= htmlspecialchars((string) $user['role_id']) ?>">
                 <?php endif; ?>
             </div>
 
@@ -87,7 +87,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
                         <?php foreach ($organizations as $organization): ?>
                             <option 
                                 value="<?= htmlspecialchars((string) $organization['id']) ?>"
-                                <?= (int) ($userData['organization_id'] ?? 0) === (int) $organization['id'] ? 'selected' : '' ?>
+                                <?= (int) ($user['organization_id'] ?? 0) === (int) $organization['id'] ? 'selected' : '' ?>
                             >
                                 <?= htmlspecialchars($organization['name']) ?> (<?= htmlspecialchars($organization['type']) ?>)
                             </option>
@@ -95,7 +95,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
                     </select>
 
                     <?php if ($isSelf): ?>
-                        <input type="hidden" name="organization_id" value="<?= htmlspecialchars((string) ($userData['organization_id'] ?? '')) ?>">
+                        <input type="hidden" name="organization_id" value="<?= htmlspecialchars((string) ($user['organization_id'] ?? '')) ?>">
                     <?php endif; ?>
                 </div>
 
@@ -107,7 +107,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
                         <?php foreach ($regions as $region): ?>
                             <option 
                                 value="<?= htmlspecialchars((string) $region['id']) ?>"
-                                <?= (int) ($userData['region_id'] ?? 0) === (int) $region['id'] ? 'selected' : '' ?>
+                                <?= (int) ($user['region_id'] ?? 0) === (int) $region['id'] ? 'selected' : '' ?>
                             >
                                 [<?= htmlspecialchars($region['organization_name']) ?>]
                                 <?= htmlspecialchars(strtoupper($region['level'])) ?>
@@ -120,7 +120,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
                     </select>
 
                     <?php if ($isSelf): ?>
-                        <input type="hidden" name="region_id" value="<?= htmlspecialchars((string) ($userData['region_id'] ?? '')) ?>">
+                        <input type="hidden" name="region_id" value="<?= htmlspecialchars((string) ($user['region_id'] ?? '')) ?>">
                     <?php endif; ?>
                 </div>
             </div>
@@ -131,7 +131,7 @@ $isSelf = (int) $userData['id'] === (int) Auth::id();
                     name="is_active" 
                     id="is_active" 
                     class="form-check-input"
-                    <?= (int) $userData['is_active'] === 1 ? 'checked' : '' ?>
+                    <?= (int) $user['is_active'] === 1 ? 'checked' : '' ?>
                     <?= $isSelf ? 'disabled' : '' ?>
                 >
                 <label class="form-check-label" for="is_active">

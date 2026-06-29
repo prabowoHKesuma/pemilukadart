@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Database;
+use App\Core\RegionScope;
 use PDO;
 
 class Region
@@ -303,5 +304,48 @@ class Region
         }
 
         return $ids;
+    }
+
+    public static function optionsScoped(): array
+    {
+        $pdo = Database::connection();
+
+        $whereSql = '';
+        $params = [];
+
+        if (!RegionScope::isUnrestricted()) {
+            $allowedIds = RegionScope::allowedRegionIds();
+
+            if (empty($allowedIds)) {
+                return [];
+            }
+
+            $placeholders = implode(',', array_fill(0, count($allowedIds), '?'));
+            $whereSql = "WHERE r.id IN ({$placeholders})";
+            $params = $allowedIds;
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT
+                r.id,
+                r.organization_id,
+                r.parent_id,
+                r.code,
+                r.name,
+                r.level,
+                o.name AS organization_name
+            FROM regions r
+            LEFT JOIN organizations o ON o.id = r.organization_id
+            {$whereSql}
+            ORDER BY
+                o.name ASC,
+                FIELD(r.level, 'kota', 'kecamatan', 'kelurahan', 'rw', 'rt', 'custom'),
+                r.code ASC,
+                r.name ASC
+        ");
+
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
