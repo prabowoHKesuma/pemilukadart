@@ -26,7 +26,7 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
 
 <div class="card">
     <div class="card-body">
-        <?php if (empty($availableVoters)): ?>
+        <?php if (empty($voters)): ?>
             <div class="alert alert-warning mb-0">
                 Tidak ada pemilih tersedia. Semua pemilih aktif sudah masuk ke pemilihan ini, atau master data pemilih masih kosong.
             </div>
@@ -72,7 +72,7 @@ $appUrl = rtrim(Env::get('APP_URL'), '/');
                         </thead>
 
                         <tbody>
-                        <?php foreach ($availableVoters as $voter): ?>
+                        <?php foreach ($voters as $voter): ?>
                             <tr>
                                 <td class="text-center">
                                     <input 
