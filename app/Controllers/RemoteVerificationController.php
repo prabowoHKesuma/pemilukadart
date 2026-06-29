@@ -286,6 +286,11 @@ class RemoteVerificationController extends Controller
         $request['can_approve'] = $canProcess && $hasPhotos;
         $request['can_reject'] = $canProcess;
 
+        $request['can_regenerate_upload_link'] =
+        ($request['status'] ?? '') === 'pending'
+        && empty($request['verified_by_1'])
+        && empty($request['verified_by_2']);
+
         $request['rt_rw_label'] = ($request['rt'] ?: '-') . ' / ' . ($request['rw'] ?: '-');
 
         $baseUrl = '/elections/' . (int) $election['id'] . '/remote-verifications/' . (int) $request['id'];
@@ -294,6 +299,7 @@ class RemoteVerificationController extends Controller
         $request['upload_url'] = $baseUrl . '/upload';
         $request['approve_url'] = $baseUrl . '/approve';
         $request['reject_url'] = $baseUrl . '/reject';
+        $request['regenerate_upload_link_url'] = $baseUrl . '/regenerate-upload-link';
 
         $request['ktp_file_url'] = !empty($request['ktp_photo_path'])
             ? '/remote-verifications/' . (int) $request['id'] . '/file/ktp'
@@ -658,5 +664,44 @@ class RemoteVerificationController extends Controller
         if (file_exists($fullPath) && is_file($fullPath)) {
             unlink($fullPath);
         }
+    }
+
+    public function regenerateUploadLink(string $electionId, string $id): void
+    {
+        Auth::requirePermission('manage_remote_verification');
+        Csrf::verify();
+
+        $election = $this->electionOr404($electionId);
+        $request = $this->requestOr404($election, $id);
+
+        if (($request['status'] ?? '') !== 'pending') {
+            Session::flash('error', 'Link upload hanya bisa dibuat ulang untuk request yang masih pending.');
+            Redirect::to('/elections/' . $electionId . '/remote-verifications/' . $id);
+        }
+
+        if (!empty($request['verified_by_1']) || !empty($request['verified_by_2'])) {
+            Session::flash('error', 'Link upload tidak bisa dibuat ulang karena request sudah masuk proses approval.');
+            Redirect::to('/elections/' . $electionId . '/remote-verifications/' . $id);
+        }
+
+        $plainUploadToken = RemoteVerification::generateUploadToken((int) $id, 24);
+
+        $uploadLink = rtrim(Env::get('APP_URL'), '/') . '/remote-verification-upload/' . $plainUploadToken;
+
+        Session::flash('remote_verification_upload_link', $uploadLink);
+
+        AuditLog::record(
+            'remote_verification_regenerate_upload_link',
+            'Generate ulang link upload verifikasi remote ID ' . $id,
+            null,
+            [
+                'election_id' => (int) $electionId,
+                'organization_id' => $election['organization_id'] ?? null,
+                'region_id' => $request['voter_region_id'] ?? ($election['region_id'] ?? null),
+            ]
+        );
+
+        Session::flash('success', 'Link upload berhasil dibuat ulang. Copy link dan kirim ke pemilih.');
+        Redirect::to('/elections/' . $electionId . '/remote-verifications/' . $id);
     }
 }
