@@ -18,6 +18,27 @@ use App\Core\ViewFormatter as F;
     </a>
 </div>
 
+<?php if (!empty($uploadLink)): ?>
+    <div class="alert alert-success">
+        <strong>Link upload berhasil dibuat.</strong>
+        Copy link ini dan kirim ke pemilih. Link ini hanya tampil sekali.
+
+        <div class="input-group mt-2">
+            <input
+                type="text"
+                id="remote-upload-link"
+                class="form-control"
+                value="<?= F::e($uploadLink) ?>"
+                readonly
+            >
+
+            <button type="button" class="btn btn-dark" onclick="copyRemoteUploadLink()">
+                Copy
+            </button>
+        </div>
+    </div>
+<?php endif; ?>
+
 <div class="row mb-3">
     <div class="col-md-4 mb-2">
         <div class="card">
@@ -265,3 +286,20 @@ use App\Core\ViewFormatter as F;
         <?php endif; ?>
     </div>
 </div>
+
+
+<script>
+function copyRemoteUploadLink() {
+    const input = document.getElementById('remote-upload-link');
+
+    if (!input) {
+        return;
+    }
+
+    input.select();
+    input.setSelectionRange(0, 99999);
+    document.execCommand('copy');
+
+    alert('Link upload berhasil dicopy.');
+}
+</script>

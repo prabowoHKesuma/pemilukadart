@@ -16,6 +16,7 @@ use App\Controllers\RoleController;
 use App\Controllers\UserController;
 use App\Controllers\RegionController;
 use App\Controllers\MenuController;
+use App\Controllers\RemoteVerificationUploadController;
 
 $router->get('/', [DashboardController::class, 'index']);
 
@@ -118,3 +119,6 @@ $router->post('/menus/store', [MenuController::class, 'store']);
 $router->get('/menus/{id}/edit', [MenuController::class, 'edit']);
 $router->post('/menus/{id}/update', [MenuController::class, 'update']);
 $router->post('/menus/{id}/delete', [MenuController::class, 'destroy']);
+
+$router->get('/remote-verification-upload/{token}', [RemoteVerificationUploadController::class, 'show']);
+$router->post('/remote-verification-upload/{token}', [RemoteVerificationUploadController::class, 'submit']);
