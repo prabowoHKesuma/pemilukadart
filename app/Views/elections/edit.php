@@ -42,18 +42,22 @@ use App\Core\ViewFormatter as F;
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Organization</label>
 
-                    <select name="organization_id" class="form-select">
-                        <option value="">-- Pilih Organization --</option>
+                    <?php if (empty($isSuperadmin)): ?>
+                        <?php $defaultOrganization = $organizations[0] ?? null; ?>
 
-                        <?php foreach ($organizations as $organization): ?>
-                            <option
-                                value="<?= F::e($organization['id']) ?>"
-                                <?= (int) ($election['organization_id'] ?? 0) === (int) $organization['id'] ? 'selected' : '' ?>
-                            >
-                                <?= F::e($organization['display_label']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                        <input
+                            type="text"
+                            class="form-control"
+                            value="<?= F::e($defaultOrganization['display_label'] ?? '-') ?>"
+                            readonly
+                        >
+
+                        <input
+                            type="hidden"
+                            name="organization_id"
+                            value="<?= F::e($election['organization_id'] ?? ($defaultOrganization['id'] ?? '')) ?>"
+                        >
+                    <?php endif; ?>
                 </div>
 
                 <div class="col-md-6 mb-3">
