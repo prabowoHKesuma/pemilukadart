@@ -238,12 +238,12 @@ class Voter
 
         [$regionSql, $regionParams] = RegionScope::andSqlForTarget('v', $targetRegionId);
 
+        $params = [$electionId];
+
         $where = [
             'v.is_active = 1',
             'ev.id IS NULL',
         ];
-
-        $params = [$electionId];
 
         if (!empty($election['organization_id'])) {
             $where[] = 'v.organization_id = ?';
