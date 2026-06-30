@@ -12,7 +12,7 @@ use App\Core\Csrf;
             <?= Csrf::field() ?>
 
             <div class="mb-3">
-                <label class="form-label">Username</label>
+                <label class="text-muted small font-weight-bold">Username</label>
                 <input 
                     type="text" 
                     name="username" 
@@ -24,7 +24,7 @@ use App\Core\Csrf;
             </div>
 
             <div class="mb-3">
-                <label class="form-label">Password</label>
+                <label class="text-muted small font-weight-bold">Password</label>
                 <input 
                     type="password" 
                     name="password" 
