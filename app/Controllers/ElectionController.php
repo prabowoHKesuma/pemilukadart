@@ -17,9 +17,9 @@ class ElectionController extends Controller
 {
     public function index(): void
     {
-        Auth::requireLogin();
+        Auth::requirePermission('manage_elections');
 
-        $elections = Election::all();
+        $elections = Election::allScoped();
 
         $this->view('elections/index', [
             'title' => 'Data Pemilihan',
@@ -119,12 +119,7 @@ class ElectionController extends Controller
     {
         Auth::requirePermission('manage_elections');
 
-        $election = Election::find((int) $id);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
+        $election = $this->electionOr404($id);
 
         if (!RegionScope::canAccessRegion((int) ($election['region_id'] ?? 0))) {
             http_response_code(404);
@@ -265,21 +260,22 @@ class ElectionController extends Controller
         Auth::requirePermission('manage_elections');
         Csrf::verify();
 
-        $election = Election::find((int) $id);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
-
-        if (!RegionScope::canAccessRegion((int) ($election['region_id'] ?? 0))) {
-            http_response_code(404);
-            die('Pemilihan berada di luar scope wilayah Anda.');
-        }
+        $election = $this->electionOr404($id);
 
         $data = $this->normalizeElectionPayload('/elections/' . $id . '/edit');
 
         Election::update((int) $id, $data);
+
+        AuditLog::record(
+            'election_update',
+            'Memperbarui pemilihan ID ' . $id . ': ' . ($data['title'] ?? $election['title']),
+            null,
+            [
+                'election_id' => (int) $id,
+                'organization_id' => $data['organization_id'] ?? ($election['organization_id'] ?? null),
+                'region_id' => $data['region_id'] ?? ($election['region_id'] ?? null),
+            ]
+        );
 
         Session::flash('success', 'Pemilihan berhasil diperbarui.');
         Redirect::to('/elections');
@@ -290,15 +286,10 @@ class ElectionController extends Controller
         Auth::requirePermission('manage_elections');
         Csrf::verify();
 
-        $election = Election::find((int) $id);
+        $election = $this->electionOr404($id);
 
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
-
-        if ($election['status'] !== 'draft') {
-            Session::flash('error', 'Pemilihan hanya boleh dihapus saat status masih draft.');
+        if (($election['status'] ?? '') !== 'draft') {
+            Session::flash('error', 'Pemilihan hanya bisa dihapus saat masih draft.');
             Redirect::to('/elections');
         }
 
@@ -306,10 +297,16 @@ class ElectionController extends Controller
 
         AuditLog::record(
             'election_delete',
-            'Menghapus pemilihan ID ' . $id . ': ' . $election['title']
+            'Menghapus pemilihan ID ' . $id . ': ' . ($election['title'] ?? '-'),
+            null,
+            [
+                'election_id' => (int) $id,
+                'organization_id' => $election['organization_id'] ?? null,
+                'region_id' => $election['region_id'] ?? null,
+            ]
         );
 
-        Session::flash('success', 'Data pemilihan berhasil dihapus.');
+        Session::flash('success', 'Pemilihan berhasil dihapus.');
         Redirect::to('/elections');
     }
 
@@ -318,12 +315,7 @@ class ElectionController extends Controller
         Auth::requirePermission('manage_elections');
         Csrf::verify();
 
-        $election = Election::find((int) $id);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
+        $election = $this->electionOr404($id);
 
         $status = $_POST['status'] ?? '';
 
@@ -336,7 +328,13 @@ class ElectionController extends Controller
 
         AuditLog::record(
             'election_status_update',
-            'Mengubah status pemilihan ID ' . $id . ' dari ' . $election['status'] . ' ke ' . $status
+            'Mengubah status pemilihan ID ' . $id . ' dari ' . $election['status'] . ' ke ' . $status,
+            null,
+            [
+                'election_id' => (int) $id,
+                'organization_id' => $election['organization_id'] ?? null,
+                'region_id' => $election['region_id'] ?? null,
+            ]
         );
 
         Session::flash('success', 'Status pemilihan berhasil diubah.');
@@ -356,5 +354,17 @@ class ElectionController extends Controller
         }
 
         return date('Y-m-d H:i:s', $timestamp);
+    }
+
+    private function electionOr404(string|int $id): array
+    {
+        $election = Election::findScoped((int) $id);
+
+        if (!$election) {
+            http_response_code(404);
+            die('Pemilihan tidak ditemukan atau berada di luar scope wilayah Anda.');
+        }
+
+        return $election;
     }
 }

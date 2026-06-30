@@ -16,14 +16,9 @@ class CandidateController extends Controller
 {
     public function index(string $electionId): void
     {
-        Auth::requireLogin();
+        Auth::requirePermission('manage_candidates');
 
-        $election = Election::find((int) $electionId);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
+        $election = $this->electionOr404($electionId);
 
         $candidates = Candidate::allByElection((int) $electionId);
 
@@ -34,16 +29,35 @@ class CandidateController extends Controller
         ]);
     }
 
+    private function electionOr404(string|int $electionId): array
+    {
+        $election = Election::findScoped((int) $electionId);
+
+        if (!$election) {
+            http_response_code(404);
+            die('Pemilihan tidak ditemukan atau berada di luar scope wilayah Anda.');
+        }
+
+        return $election;
+    }
+
+    private function candidateOr404(array $election, string|int $candidateId): array
+    {
+        $candidate = Candidate::findByElection((int) $election['id'], (int) $candidateId);
+
+        if (!$candidate) {
+            http_response_code(404);
+            die('Kandidat tidak ditemukan atau bukan milik pemilihan ini.');
+        }
+
+        return $candidate;
+    }
+
     public function create(string $electionId): void
     {
         Auth::requirePermission('manage_candidates');
 
-        $election = Election::find((int) $electionId);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
+         $election = $this->electionOr404($electionId);
 
         if ($election['status'] !== 'draft') {
             Session::flash('error', 'Kandidat hanya boleh ditambahkan saat status pemilihan masih draft.');
@@ -61,12 +75,7 @@ class CandidateController extends Controller
         Auth::requirePermission('manage_candidates');
         Csrf::verify();
 
-        $election = Election::find((int) $electionId);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
+        $election = $this->electionOr404($electionId);
 
         if ($election['status'] !== 'draft') {
             Session::flash('error', 'Kandidat hanya boleh ditambahkan saat status pemilihan masih draft.');
@@ -108,7 +117,13 @@ class CandidateController extends Controller
 
         AuditLog::record(
             'candidate_create',
-            'Menambahkan kandidat "' . $name . '" nomor urut ' . $numberOrder . ' pada election ID ' . $electionId
+            'Menambahkan kandidat "' . $name . '" nomor urut ' . $numberOrder . ' pada election ID ' . $electionId,
+            null,
+            [
+                'election_id' => (int) $election['id'],
+                'organization_id' => $election['organization_id'] ?? null,
+                'region_id' => $election['region_id'] ?? null,
+            ]
         );
 
         Session::flash('success', 'Data kandidat berhasil ditambahkan.');
@@ -119,19 +134,8 @@ class CandidateController extends Controller
     {
         Auth::requirePermission('manage_candidates');
 
-        $election = Election::find((int) $electionId);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
-
-        $candidate = Candidate::findByElection((int) $electionId, (int) $id);
-
-        if (!$candidate) {
-            http_response_code(404);
-            die('Data kandidat tidak ditemukan.');
-        }
+         $election = $this->electionOr404($electionId);
+         $candidate = $this->candidateOr404($election, $id);
 
         if ($election['status'] !== 'draft') {
             Session::flash('error', 'Kandidat hanya boleh diedit saat status pemilihan masih draft.');
@@ -150,19 +154,8 @@ class CandidateController extends Controller
         Auth::requirePermission('manage_candidates');
         Csrf::verify();
 
-        $election = Election::find((int) $electionId);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
-
-        $candidate = Candidate::findByElection((int) $electionId, (int) $id);
-
-        if (!$candidate) {
-            http_response_code(404);
-            die('Data kandidat tidak ditemukan.');
-        }
+        $election = $this->electionOr404($electionId);
+        $candidate = $this->candidateOr404($election, $id);
 
         if ($election['status'] !== 'draft') {
             Session::flash('error', 'Kandidat hanya boleh diperbarui saat status pemilihan masih draft.');
@@ -210,7 +203,13 @@ class CandidateController extends Controller
 
         AuditLog::record(
             'candidate_update',
-            'Memperbarui kandidat ID ' . $id . ' menjadi "' . $name . '" nomor urut ' . $numberOrder . ' pada election ID ' . $electionId
+            'Memperbarui kandidat ID ' . $id . ' menjadi "' . $name . '" nomor urut ' . $numberOrder . ' pada election ID ' . $electionId,
+            null,
+        [
+            'election_id' => (int) $election['id'],
+            'organization_id' => $election['organization_id'] ?? null,
+            'region_id' => $election['region_id'] ?? null,
+        ]
         );
 
         Session::flash('success', 'Data kandidat berhasil diperbarui.');
@@ -222,19 +221,8 @@ class CandidateController extends Controller
         Auth::requirePermission('manage_candidates');
         Csrf::verify();
 
-        $election = Election::find((int) $electionId);
-
-        if (!$election) {
-            http_response_code(404);
-            die('Data pemilihan tidak ditemukan.');
-        }
-
-        $candidate = Candidate::findByElection((int) $electionId, (int) $id);
-
-        if (!$candidate) {
-            http_response_code(404);
-            die('Data kandidat tidak ditemukan.');
-        }
+        $election = $this->electionOr404($electionId);
+        $candidate = $this->candidateOr404($election, $id);
 
         if ($election['status'] !== 'draft') {
             Session::flash('error', 'Kandidat hanya boleh dihapus saat status pemilihan masih draft.');
@@ -247,7 +235,13 @@ class CandidateController extends Controller
 
         AuditLog::record(
             'candidate_delete',
-            'Menghapus kandidat ID ' . $id . ' "' . $candidate['name'] . '" pada election ID ' . $electionId
+            'Menghapus kandidat ID ' . $id . ' "' . $candidate['name'] . '" pada election ID ' . $electionId,
+            null,
+        [
+            'election_id' => (int) $election['id'],
+            'organization_id' => $election['organization_id'] ?? null,
+            'region_id' => $election['region_id'] ?? null,
+        ]
         );
 
         Session::flash('success', 'Data kandidat berhasil dihapus.');
