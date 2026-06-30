@@ -6,7 +6,7 @@
             <img
                 src="<?= $logo ?>"
                 alt="Logo Pilkada RT 11"
-                class="img-fluid w-25 mb-3"
+                class="img-fluid w-50 mb-3"
             >
         </p>
         <p class="mb-0 text-center">
