@@ -24,3 +24,13 @@ Env::load(__DIR__ . '/.env');
 date_default_timezone_set('Asia/Jakarta');
 
 Session::start();
+
+define('BASE_PATH', __DIR__);
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+if ($host === 'localhost' || $host === '127.0.0.1') {
+    // KONFIGURASI LOCAL
+    define('BASE_URL', '/pemilukadart/public');
+} else {
+    // KONFIGURASI PRODUCTION (Sesuaikan dengan nama folder Anda di hosting)
+    define('BASE_URL', '/');
+}

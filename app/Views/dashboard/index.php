@@ -10,7 +10,7 @@
             >
         </p>
         <p class="mb-0 text-center">
-            Selamat datang di dashboard RT Voting! Di sini Anda dapat mengelola
+            Selamat datang di dashboard e-PILKADA! Di sini Anda dapat mengelola
             pemilihan, kandidat, dan pemilih dengan mudah. Gunakan menu di sebelah
             kiri untuk mulai mengatur pemilihan Anda.
         </p>
