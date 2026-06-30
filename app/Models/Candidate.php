@@ -23,23 +23,26 @@ class Candidate
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function findByElection(int $electionId, int $id): ?array
+    public static function findByElection(int $electionId, int $candidateId): ?array
     {
         $pdo = Database::connection();
 
         $stmt = $pdo->prepare("
             SELECT *
             FROM candidates
-            WHERE election_id = ?
-              AND id = ?
+            WHERE id = ?
+            AND election_id = ?
             LIMIT 1
         ");
 
-        $stmt->execute([$electionId, $id]);
+        $stmt->execute([
+            $candidateId,
+            $electionId,
+        ]);
 
-        $candidate = $stmt->fetch(PDO::FETCH_ASSOC);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $candidate ?: null;
+        return $row ?: null;
     }
 
     public static function numberExists(int $electionId, int $numberOrder, ?int $ignoreId = null): bool

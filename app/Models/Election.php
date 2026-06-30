@@ -212,4 +212,77 @@ class Election
 
         return $election ?: null;
     }
+
+    public static function findScoped(int $id): ?array
+    {
+        $pdo = Database::connection();
+
+        [$regionSql, $regionParams] = RegionScope::andSqlForTarget('e', null);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                e.*,
+
+                u.name AS created_by_name,
+
+                o.name AS organization_name,
+                o.type AS organization_type,
+
+                r.code AS region_code,
+                r.name AS region_name,
+                r.level AS region_level
+
+            FROM elections e
+
+            LEFT JOIN users u ON u.id = e.created_by
+            LEFT JOIN organizations o ON o.id = e.organization_id
+            LEFT JOIN regions r ON r.id = e.region_id
+
+            WHERE e.id = ?
+            {$regionSql}
+
+            LIMIT 1
+        ");
+
+        $stmt->execute(array_merge([$id], $regionParams));
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $row ?: null;
+    }
+
+    public static function allScoped(): array
+    {
+        $pdo = Database::connection();
+
+        [$whereSql, $params] = RegionScope::whereSqlForTarget('e', null);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                e.*,
+
+                u.name AS created_by_name,
+
+                o.name AS organization_name,
+                o.type AS organization_type,
+
+                r.code AS region_code,
+                r.name AS region_name,
+                r.level AS region_level
+
+            FROM elections e
+
+            LEFT JOIN users u ON u.id = e.created_by
+            LEFT JOIN organizations o ON o.id = e.organization_id
+            LEFT JOIN regions r ON r.id = e.region_id
+
+            {$whereSql}
+
+            ORDER BY e.created_at DESC
+        ");
+
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
